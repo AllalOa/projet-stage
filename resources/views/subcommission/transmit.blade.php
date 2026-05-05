@@ -6,13 +6,35 @@
     confirmModal: false,
     selectedDossier: null,
     readyDossiers: [
-        { id: 'SC-2489', title: 'Ethical Challenges in Modern AI',           postulant: 'Pr. Mehdi Boudiaf',   type: 'Journal',       decision: 'favorable',    recommendation: 'Avis favorable à l\'unanimité des examinateurs. Publication recommandée.', date: '2026-04-20', consolidatedDate: '2026-05-01' },
-        { id: 'SC-2488', title: 'Quantum Computing Optimization',            postulant: 'Dr. Hamid Moussa',    type: 'Journal',       decision: 'reserve',      recommendation: 'Avis favorable avec réserve. Corrections mineures demandées sur la méthodologie.', date: '2026-04-15', consolidatedDate: '2026-04-29' },
+        @foreach($dossiers as $d)
+        { 
+            id: 'REQ-{{ str_pad($d->id, 4, "0", STR_PAD_LEFT) }}', 
+            real_id: {{ $d->id }},
+            title: '{!! addslashes($d->publication->titre ?? "Sans titre") !!}',
+            postulant: '{!! addslashes($d->postulant->prenom . " " . $d->postulant->nom) !!}',
+            type: '{{ $d->publication->journal ? "Journal" : "Manifestation" }}',
+            decision: '{{ $d->decision_finale }}',    
+            recommendation: '—', 
+            date: '{{ $d->created_at->format("Y-m-d") }}', 
+            consolidatedDate: '{{ $d->date_decision ? \Carbon\Carbon::parse($d->date_decision)->format("Y-m-d") : "N/A" }}' 
+        },
+        @endforeach
     ],
     transmittedDossiers: [
-        { id: 'SC-2485', title: 'Neural Network Pruning Strategies',         postulant: 'Dr. Youssef Amrani',  type: 'Manifestation', decision: 'favorable',    recommendation: 'Travail de qualité. Participation recommandée.', date: '2026-03-10', consolidatedDate: '2026-03-25', transmittedDate: '2026-03-28' },
-        { id: 'SC-2482', title: 'Federated Learning Privacy Preserving',     postulant: 'Dr. Amira Bekkouche', type: 'Journal',       decision: 'defavorable',  recommendation: 'Méthodologie insuffisante. Publication non recommandée.', date: '2026-02-20', consolidatedDate: '2026-03-15', transmittedDate: '2026-03-18' },
-        { id: 'SC-2480', title: 'Cloud-Edge Collaborative Computing',        postulant: 'Pr. Lotfi Boualem',   type: 'Journal',       decision: 'favorable',    recommendation: 'Contribution originale et solide. Recommandé.', date: '2026-02-05', consolidatedDate: '2026-03-01', transmittedDate: '2026-03-05' },
+        @foreach($transmis as $d)
+        { 
+            id: 'REQ-{{ str_pad($d->id, 4, "0", STR_PAD_LEFT) }}', 
+            real_id: {{ $d->id }},
+            title: '{!! addslashes($d->publication->titre ?? "Sans titre") !!}',
+            postulant: '{!! addslashes($d->postulant->prenom . " " . $d->postulant->nom) !!}',
+            type: '{{ $d->publication->journal ? "Journal" : "Manifestation" }}',
+            decision: '{{ $d->decision_finale }}',    
+            recommendation: '—', 
+            date: '{{ $d->created_at->format("Y-m-d") }}', 
+            consolidatedDate: '{{ $d->date_decision ? \Carbon\Carbon::parse($d->date_decision)->format("Y-m-d") : "N/A" }}',
+            transmittedDate: '{{ $d->updated_at->format("Y-m-d") }}' 
+        },
+        @endforeach
     ],
     decisionLabel(d) {
         return { favorable: 'Favorable', reserve: 'Avec Réserve', defavorable: 'Défavorable' }[d] || d;
@@ -33,16 +55,15 @@
     },
     transmit() {
         if (this.selectedDossier) {
-            const d = this.selectedDossier;
-            d.transmittedDate = new Date().toISOString().split('T')[0];
-            this.transmittedDossiers.unshift({...d});
-            this.readyDossiers = this.readyDossiers.filter(r => r.id !== d.id);
-            this.confirmModal = false;
-            this.selectedDossier = null;
-            showToast('Dossier transmis au Conseil Scientifique !');
+            this.$refs.transmitForm.action = '{{ url("/subcommission/transmit") }}/' + this.selectedDossier.real_id;
+            this.$refs.transmitForm.submit();
         }
     }
 }">
+
+    <form method="POST" x-ref="transmitForm">
+        @csrf
+    </form>
 
     {{-- ── Header ─────────────────────────────────────────── --}}
     <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">

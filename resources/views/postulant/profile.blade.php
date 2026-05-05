@@ -1,41 +1,40 @@
 @extends('layouts.app')
 
 @section('content')
-<div class="max-w-4xl mx-auto space-y-8" x-data="{
-    saved: false,
-    profile: {
-        firstName: 'Ahmed',
-        lastName:  'Benali',
-        email:     'ahmed.benali@univ.dz',
-        phone:     '+213 550 123 456',
-        grade:     'Maître de Conférences A',
-        university:'Université des Sciences et de la Technologie',
-        department:'Département Informatique',
-        speciality:'Intelligence Artificielle & Vision par Ordinateur',
-        orcid:     '0000-0002-1234-5678',
-        scholar:   'https://scholar.google.com/citations?user=example',
-        bio:       'Chercheur en IA appliquée à l\'imagerie médicale, avec 12 ans d\'expérience académique.'
-    },
-    save() {
-        this.saved = true;
-        showToast('Profil enregistré avec succès !', 'success');
-        setTimeout(() => this.saved = false, 3000);
-    }
-}">
+<div class="max-w-4xl mx-auto space-y-8">
 
-    {{-- ── Page Header ────────────────────────────────── --}}
-    <div class="flex items-center justify-between">
+    @if ($errors->any())
+    <div class="bg-rose-50 border border-rose-200 rounded-xl p-4 flex items-start gap-3">
+        <i class="fa-solid fa-circle-exclamation text-rose-500 mt-0.5"></i>
         <div>
-            <h1 class="text-2xl font-extrabold text-slate-900">Mon Profil</h1>
-            <p class="text-slate-500 text-sm mt-1">Informations personnelles et académiques</p>
+            @foreach ($errors->all() as $error)
+                <p class="text-sm text-rose-700 font-medium">{{ $error }}</p>
+            @endforeach
         </div>
-        <button @click="save()"
-            class="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white font-bold px-5 py-3 rounded-xl transition-all shadow-lg shadow-indigo-200 text-sm"
-            :class="saved ? 'bg-emerald-600 hover:bg-emerald-600 shadow-emerald-200' : ''">
-            <i :class="saved ? 'fa-solid fa-check' : 'fa-solid fa-floppy-disk'"></i>
-            <span x-text="saved ? 'Enregistré !' : 'Enregistrer'"></span>
-        </button>
     </div>
+    @endif
+
+    @if (session('success'))
+    <div class="bg-emerald-50 border border-emerald-200 rounded-xl p-4 text-sm text-emerald-700 font-medium flex items-center gap-2">
+        <i class="fa-solid fa-circle-check text-emerald-500"></i> {{ session('success') }}
+    </div>
+    @endif
+
+    <form method="POST" action="{{ route('postulant.profile.update') }}">
+        @csrf
+
+        {{-- ── Page Header ────────────────────────────────── --}}
+        <div class="flex items-center justify-between mb-8">
+            <div>
+                <h1 class="text-2xl font-extrabold text-slate-900">Mon Profil</h1>
+                <p class="text-slate-500 text-sm mt-1">Informations personnelles et académiques</p>
+            </div>
+            <button type="submit"
+                class="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white font-bold px-5 py-3 rounded-xl transition-all shadow-lg shadow-indigo-200 text-sm">
+                <i class="fa-solid fa-floppy-disk"></i>
+                <span>Enregistrer</span>
+            </button>
+        </div>
 
     {{-- ── Avatar Card ─────────────────────────────────── --}}
     <div class="bg-white border border-slate-200 rounded-3xl shadow-sm overflow-hidden">
@@ -43,12 +42,12 @@
         <div class="px-8 pb-8">
             <div class="flex items-end gap-5 -mt-10 mb-6">
                 {{-- Avatar --}}
-                <div class="w-20 h-20 rounded-2xl bg-indigo-700 border-4 border-white shadow-xl flex items-center justify-center text-white text-2xl font-black">
-                    <span x-text="profile.firstName.charAt(0) + profile.lastName.charAt(0)">AB</span>
+                <div class="w-20 h-20 rounded-2xl bg-indigo-700 border-4 border-white shadow-xl flex items-center justify-center text-white text-2xl font-black uppercase">
+                    <span>{{ substr($personnel->prenom, 0, 1) . substr($personnel->nom, 0, 1) }}</span>
                 </div>
                 <div class="pb-1">
-                    <h2 class="text-xl font-black text-slate-900" x-text="profile.firstName + ' ' + profile.lastName">Ahmed Benali</h2>
-                    <p class="text-sm text-slate-500" x-text="profile.grade">Maître de Conférences A</p>
+                    <h2 class="text-xl font-black text-slate-900">{{ $personnel->prenom }} {{ $personnel->nom }}</h2>
+                    <p class="text-sm text-slate-500">{{ $personnel->grade ?? 'Aucun grade' }}</p>
                 </div>
                 <div class="ml-auto pb-1">
                     <span class="bg-emerald-100 text-emerald-700 text-xs font-bold px-3 py-1.5 rounded-full flex items-center gap-1.5">
@@ -65,27 +64,27 @@
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
                     <div>
                         <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Prénom</label>
-                        <input type="text" x-model="profile.firstName"
+                        <input type="text" name="prenom" value="{{ old('prenom', $personnel->prenom) }}" required
                             class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-4 focus:ring-indigo-100 focus:border-indigo-500 outline-none text-slate-800 font-semibold transition-all">
                     </div>
                     <div>
                         <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Nom</label>
-                        <input type="text" x-model="profile.lastName"
+                        <input type="text" name="nom" value="{{ old('nom', $personnel->nom) }}" required
                             class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-4 focus:ring-indigo-100 focus:border-indigo-500 outline-none text-slate-800 font-semibold transition-all">
                     </div>
                     <div>
                         <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Email</label>
                         <div class="relative">
                             <span class="absolute inset-y-0 left-4 flex items-center text-slate-400"><i class="fa-regular fa-envelope"></i></span>
-                            <input type="email" x-model="profile.email"
-                                class="w-full pl-11 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-4 focus:ring-indigo-100 focus:border-indigo-500 outline-none text-slate-800 font-semibold transition-all">
+                            <input type="email" value="{{ $personnel->email }}" disabled
+                                class="w-full pl-11 pr-4 py-3 bg-slate-100 border border-slate-200 rounded-xl outline-none text-slate-500 font-semibold transition-all cursor-not-allowed" title="L'email ne peut pas être modifié">
                         </div>
                     </div>
                     <div>
                         <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Téléphone</label>
                         <div class="relative">
                             <span class="absolute inset-y-0 left-4 flex items-center text-slate-400"><i class="fa-solid fa-phone"></i></span>
-                            <input type="tel" x-model="profile.phone"
+                            <input type="tel" name="phone" value="{{ old('phone', $personnel->phone) }}"
                                 class="w-full pl-11 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-4 focus:ring-indigo-100 focus:border-indigo-500 outline-none text-slate-800 font-semibold transition-all">
                         </div>
                     </div>
@@ -99,64 +98,31 @@
                 </h3>
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
                     <div class="md:col-span-2">
-                        <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Établissement</label>
+                        <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Laboratoire de Recherche</label>
                         <div class="relative">
-                            <span class="absolute inset-y-0 left-4 flex items-center text-slate-400"><i class="fa-solid fa-building-columns"></i></span>
-                            <input type="text" x-model="profile.university"
+                            <span class="absolute inset-y-0 left-4 flex items-center text-slate-400"><i class="fa-solid fa-flask"></i></span>
+                            <input type="text" name="laboratoire" value="{{ old('laboratoire', $postulant->laboratoire ?? '') }}"
                                 class="w-full pl-11 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-4 focus:ring-indigo-100 focus:border-indigo-500 outline-none text-slate-800 font-semibold transition-all">
                         </div>
                     </div>
                     <div>
                         <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Département / Faculté</label>
-                        <input type="text" x-model="profile.department"
+                        <input type="text" name="departement" value="{{ old('departement', $personnel->departement) }}"
                             class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-4 focus:ring-indigo-100 focus:border-indigo-500 outline-none text-slate-800 font-semibold transition-all">
                     </div>
                     <div>
                         <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Grade</label>
-                        <select x-model="profile.grade"
+                        <select name="grade"
                             class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-4 focus:ring-indigo-100 focus:border-indigo-500 outline-none text-slate-800 font-semibold transition-all">
-                            <option>Professeur</option>
-                            <option>Maître de Conférences A</option>
-                            <option>Maître de Conférences B</option>
-                            <option>Maître Assistant A</option>
-                            <option>Maître Assistant B</option>
-                            <option>Doctorant</option>
+                            @foreach(['Professeur', 'Maître de Conférences A', 'Maître de Conférences B', 'Maître Assistant A', 'Maître Assistant B', 'Doctorant'] as $g)
+                                <option value="{{ $g }}" {{ old('grade', $personnel->grade) == $g ? 'selected' : '' }}>{{ $g }}</option>
+                            @endforeach
                         </select>
                     </div>
                     <div class="md:col-span-2">
-                        <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Spécialité</label>
-                        <input type="text" x-model="profile.speciality"
+                        <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Grade de Recherche</label>
+                        <input type="text" name="grade_recherche" value="{{ old('grade_recherche', $postulant->grade_recherche ?? '') }}"
                             class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-4 focus:ring-indigo-100 focus:border-indigo-500 outline-none text-slate-800 font-semibold transition-all">
-                    </div>
-                    <div class="md:col-span-2">
-                        <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Bio / Présentation</label>
-                        <textarea rows="3" x-model="profile.bio"
-                            class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-4 focus:ring-indigo-100 focus:border-indigo-500 outline-none resize-none text-slate-800 font-semibold transition-all"></textarea>
-                    </div>
-                </div>
-            </div>
-
-            {{-- Liens Scientifiques --}}
-            <div class="pt-6 border-t border-slate-100">
-                <h3 class="text-sm font-black text-slate-900 uppercase tracking-widest mb-5 flex items-center gap-2">
-                    <i class="fa-solid fa-link text-indigo-500"></i> Identifiants Scientifiques
-                </h3>
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
-                    <div>
-                        <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">ORCID iD</label>
-                        <div class="relative">
-                            <span class="absolute inset-y-0 left-4 flex items-center text-emerald-500 font-black text-xs">ID</span>
-                            <input type="text" x-model="profile.orcid" placeholder="0000-0000-0000-0000"
-                                class="w-full pl-11 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-4 focus:ring-indigo-100 focus:border-indigo-500 outline-none text-slate-800 font-semibold transition-all font-mono">
-                        </div>
-                    </div>
-                    <div>
-                        <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Google Scholar</label>
-                        <div class="relative">
-                            <span class="absolute inset-y-0 left-4 flex items-center text-slate-400"><i class="fa-brands fa-google text-sm"></i></span>
-                            <input type="url" x-model="profile.scholar" placeholder="https://scholar.google.com/..."
-                                class="w-full pl-11 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-4 focus:ring-indigo-100 focus:border-indigo-500 outline-none text-slate-800 font-semibold transition-all">
-                        </div>
                     </div>
                 </div>
             </div>
@@ -172,35 +138,26 @@
                 </div>
                 <div>
                     <h3 class="font-bold text-slate-900">Sécurité du compte</h3>
-                    <p class="text-xs text-slate-500">Dernière modification il y a 30 jours</p>
+                    <p class="text-xs text-slate-500">Facultatif</p>
                 </div>
             </div>
-            <button @click="changing = !changing"
+            <button type="button" @click="changing = !changing"
                 class="text-sm font-bold text-rose-600 hover:text-rose-800 px-4 py-2 rounded-xl hover:bg-rose-50 transition-all">
                 Changer le mot de passe
             </button>
         </div>
-        <div x-show="changing" x-transition class="mt-6 grid grid-cols-1 md:grid-cols-3 gap-4 pt-6 border-t border-slate-100">
-            <div>
-                <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Mot de passe actuel</label>
-                <input type="password" class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-4 focus:ring-rose-100 focus:border-rose-400 outline-none transition-all">
-            </div>
+        <div x-show="changing" x-transition class="mt-6 grid grid-cols-1 md:grid-cols-2 gap-4 pt-6 border-t border-slate-100">
             <div>
                 <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Nouveau mot de passe</label>
-                <input type="password" class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-4 focus:ring-rose-100 focus:border-rose-400 outline-none transition-all">
+                <input type="password" name="password" class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-4 focus:ring-rose-100 focus:border-rose-400 outline-none transition-all">
             </div>
             <div>
                 <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Confirmer</label>
-                <input type="password" class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-4 focus:ring-rose-100 focus:border-rose-400 outline-none transition-all">
-            </div>
-            <div class="md:col-span-3 flex justify-end">
-                <button @click="changing=false; showToast('Mot de passe mis à jour !', 'success')"
-                    class="bg-rose-600 hover:bg-rose-700 text-white font-bold px-5 py-2.5 rounded-xl text-sm transition-all shadow-lg shadow-rose-200">
-                    Mettre à jour
-                </button>
+                <input type="password" name="password_confirmation" class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-4 focus:ring-rose-100 focus:border-rose-400 outline-none transition-all">
             </div>
         </div>
     </div>
 
+    </form>
 </div>
 @endsection

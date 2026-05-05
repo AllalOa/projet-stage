@@ -4,38 +4,27 @@
 <div class="max-w-7xl mx-auto space-y-6" x-data="{
     filter: 'all',
     dossiers: [
+        @foreach($demandes as $d)
         {
-            id: 'SC-2490', title: 'Blockchain for Decentralized Identity', postulant: 'Dr. Samira Kaci', type: 'Manifestation',
+            id: 'REQ-{{ str_pad($d->id, 4, "0", STR_PAD_LEFT) }}', 
+            real_id: {{ $d->id }},
+            title: '{!! addslashes($d->publication->titre ?? "Sans titre") !!}', 
+            postulant: '{!! addslashes($d->postulant->prenom . " " . $d->postulant->nom) !!}', 
+            type: '{{ $d->publication->journal ? "Journal" : "Manifestation" }}',
+            pdf_path: '{{ $d->publication->pdf_path ? asset("storage/" . $d->publication->pdf_path) : "" }}',
             examiners: [
-                { name: 'Pr. Hamid El Moussaoui', specialty: 'IA',                   proposal: 'accepted', avis: 'favorable',   comment: 'Travail rigoureux et bien structuré.' },
-                { name: 'Dr. Kamel Ait Ouali',    specialty: 'Machine Learning',      proposal: 'accepted', avis: 'favorable',   comment: 'Contribution significative au domaine.' },
-                { name: 'Pr. Nadia Bensalem',     specialty: 'Traitement d\'Images',  proposal: 'accepted', avis: 'pending',     comment: '' },
+                @foreach($d->avis as $avis)
+                { 
+                    name: '{!! addslashes($avis->examinateur->prenom . " " . $avis->examinateur->nom) !!}', 
+                    specialty: '{!! addslashes($avis->examinateur->specialite ?? "N/A") !!}', 
+                    proposal: 'accepted', 
+                    avis: '{{ $avis->resultat ?? "pending" }}',   
+                    comment: '{!! addslashes(str_replace(["\n","\r"], [" ",""], $avis->commentaire ?? "")) !!}' 
+                },
+                @endforeach
             ]
         },
-        {
-            id: 'SC-2489', title: 'Ethical Challenges in Modern AI', postulant: 'Pr. Mehdi Boudiaf', type: 'Journal',
-            examiners: [
-                { name: 'Pr. Fatima Benbouzid', specialty: 'IA',              proposal: 'accepted',  avis: 'favorable',     comment: 'Excellent article. Recommandé.' },
-                { name: 'Dr. Rachid Boudour',   specialty: 'Deep Learning',   proposal: 'accepted',  avis: 'defavorable',   comment: 'Manque de profondeur dans l\'analyse comparative.' },
-                { name: 'Pr. Amel Zenati',      specialty: 'Traitement',      proposal: 'accepted',  avis: 'favorable',     comment: 'Très bonne revue de littérature.' },
-            ]
-        },
-        {
-            id: 'SC-2491', title: 'Deep Learning in Medical Imaging', postulant: 'Dr. Ahmed Benali', type: 'Journal',
-            examiners: [
-                { name: 'Pr. Hamid El Moussaoui', specialty: 'IA',             proposal: 'accepted',  avis: 'pending', comment: '' },
-                { name: 'Dr. Mohamed Cheriet',     specialty: 'Vision',         proposal: 'proposed',  avis: null,      comment: '' },
-                { name: 'Pr. Leila Hamdad',        specialty: 'Data Science',   proposal: 'declined',  avis: null,      comment: '' },
-            ]
-        },
-        {
-            id: 'SC-2487', title: 'Edge Computing IoT Networks', postulant: 'Dr. Fatima Zerhouni', type: 'Manifestation',
-            examiners: [
-                { name: 'Dr. Kamel Ait Ouali',    specialty: 'ML',    proposal: 'accepted', avis: 'pending',  comment: '' },
-                { name: 'Pr. Nadia Bensalem',     specialty: 'TI',    proposal: 'proposed', avis: null,       comment: '' },
-                { name: 'Pr. Fatima Benbouzid',   specialty: 'IA',    proposal: 'proposed', avis: null,       comment: '' },
-            ]
-        },
+        @endforeach
     ],
     getAvisCount(dossier) {
         return dossier.examiners.filter(e => e.proposal === 'accepted' && (e.avis === 'favorable' || e.avis === 'defavorable')).length;
@@ -118,6 +107,9 @@
                             <h3 class="font-bold text-slate-800" x-text="dossier.title"></h3>
                             <p class="text-xs text-slate-500 mt-0.5">
                                 <span x-text="dossier.postulant"></span> · <span x-text="dossier.type"></span>
+                                <template x-if="dossier.pdf_path">
+                                    <span> · <a :href="dossier.pdf_path" target="_blank" class="text-indigo-600 hover:text-indigo-800 font-bold"><i class="fa-solid fa-file-pdf text-rose-500"></i> Voir la publication</a></span>
+                                </template>
                             </p>
                         </div>
                     </div>
@@ -135,15 +127,15 @@
                         </div>
                         {{-- Actions --}}
                         <template x-if="isComplete(dossier)">
-                            <a :href="'/subcommission/consolidate/' + dossier.id.replace('SC-','')"
-                               @click.prevent="navigateTo('subcommission/consolidate/' + dossier.id.replace('SC-',''))"
+                            <a :href="'/subcommission/consolidate/' + dossier.real_id"
+                               @click.prevent="navigateTo('subcommission/consolidate/' + dossier.real_id)"
                                class="inline-flex items-center gap-1.5 px-4 py-2 text-xs font-bold bg-emerald-500 text-white rounded-xl hover:bg-emerald-600 transition-all shadow-lg shadow-emerald-200">
                                 <i class="fa-solid fa-file-circle-check"></i> Consolider
                             </a>
                         </template>
                         <template x-if="hasDeclined(dossier)">
-                            <a :href="'/subcommission/assign/' + dossier.id.replace('SC-','')"
-                               @click.prevent="navigateTo('subcommission/assign/' + dossier.id.replace('SC-',''))"
+                            <a :href="'/subcommission/assign/' + dossier.real_id"
+                               @click.prevent="navigateTo('subcommission/assign/' + dossier.real_id)"
                                class="inline-flex items-center gap-1.5 px-4 py-2 text-xs font-bold bg-amber-500 text-white rounded-xl hover:bg-amber-600 transition-all shadow-lg shadow-amber-200">
                                 <i class="fa-solid fa-user-plus"></i> Remplacer
                             </a>

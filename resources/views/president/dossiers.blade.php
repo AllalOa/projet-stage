@@ -4,11 +4,18 @@
 <div class="max-w-7xl mx-auto space-y-6" x-data="{
     filter: 'all',
     dossiers: [
-        { id: 'SC-2489', title: 'Ethical Challenges in Modern AI',       postulant: 'Pr. Mehdi Boudiaf',    commission: 'Informatique & IA',  avis: 'favorable',    date: '2026-05-01', status: 'pending' },
-        { id: 'SC-2488', title: 'Quantum Computing Optimization',        postulant: 'Dr. Hamid Moussa',     commission: 'Informatique & IA',  avis: 'reserve',      date: '2026-04-29', status: 'pending' },
-        { id: 'SC-2485', title: 'Neural Network Pruning Strategies',     postulant: 'Dr. Youssef Amrani',   commission: 'Informatique & IA',  avis: 'favorable',    date: '2026-03-28', status: 'approved' },
-        { id: 'SC-2482', title: 'Federated Learning Privacy',            postulant: 'Dr. Amira Bekkouche',  commission: 'Informatique & IA',  avis: 'defavorable',  date: '2026-03-18', status: 'rejected' },
-        { id: 'SC-2480', title: 'Cloud-Edge Collaborative Computing',    postulant: 'Pr. Lotfi Boualem',    commission: 'Télécommunications', avis: 'favorable',    date: '2026-03-05', status: 'approved' },
+        @foreach($dossiers as $d)
+        { 
+            id: 'REQ-{{ str_pad($d->id, 4, "0", STR_PAD_LEFT) }}', 
+            real_id: {{ $d->id }},
+            title: '{!! addslashes($d->publication->titre ?? "Sans titre") !!}',       
+            postulant: '{!! addslashes($d->postulant->prenom . " " . $d->postulant->nom) !!}',    
+            commission: '{!! addslashes($d->sousCommission->nom ?? "N/A") !!}',  
+            avis: '{{ $d->decision_finale ?? "" }}',    
+            date: '{{ $d->date_decision ? \Carbon\Carbon::parse($d->date_decision)->format("Y-m-d") : "" }}', 
+            status: '{{ $d->statut == "fini" && $d->decision_finale == "favorable" ? "approved" : ($d->statut == "fini" && $d->decision_finale == "defavorable" ? "rejected" : "pending") }}' 
+        },
+        @endforeach
     ],
     get filtered() {
         if (this.filter === 'all') return this.dossiers;
@@ -73,12 +80,12 @@
                         </td>
                         <td class="px-6 py-4">
                             <template x-if="d.status === 'pending'">
-                                <a :href="'/president/dossier/' + d.id.replace('SC-','')" @click.prevent="navigateTo('president/dossier/' + d.id.replace('SC-',''))" class="text-amber-600 hover:text-amber-800 text-xs font-bold flex items-center gap-1">
+                                <a :href="'/president/dossier/' + d.real_id" @click.prevent="navigateTo('president/dossier/' + d.real_id)" class="text-amber-600 hover:text-amber-800 text-xs font-bold flex items-center gap-1">
                                     <i class="fa-solid fa-gavel"></i> Délibérer
                                 </a>
                             </template>
                             <template x-if="d.status !== 'pending'">
-                                <a :href="'/president/dossier/' + d.id.replace('SC-','')" @click.prevent="navigateTo('president/dossier/' + d.id.replace('SC-',''))" class="text-slate-500 hover:text-slate-800 text-xs font-bold flex items-center gap-1">
+                                <a :href="'/president/dossier/' + d.real_id" @click.prevent="navigateTo('president/dossier/' + d.real_id)" class="text-slate-500 hover:text-slate-800 text-xs font-bold flex items-center gap-1">
                                     <i class="fa-solid fa-eye"></i> Voir
                                 </a>
                             </template>

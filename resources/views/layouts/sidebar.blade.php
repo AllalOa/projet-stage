@@ -134,9 +134,13 @@
     </div>
 
     <div class="p-4 border-t border-white/10">
-        <a href="/" class="flex items-center gap-3 p-3 rounded-lg hover:bg-red-500/20 text-red-300 transition-colors">
-            <i class="fa-solid fa-right-from-bracket w-6"></i>
-            <span x-show="sidebarOpen">Logout</span>
-        </a>
+        <form method="POST" action="{{ route('logout') }}" id="logout-form">
+            @csrf
+            <button type="submit"
+                class="w-full flex items-center gap-3 p-3 rounded-lg hover:bg-red-500/20 text-red-300 transition-colors text-left">
+                <i class="fa-solid fa-right-from-bracket w-6 shrink-0"></i>
+                <span x-show="sidebarOpen" class="font-semibold text-sm">Déconnexion</span>
+            </button>
+        </form>
     </div>
 </aside>

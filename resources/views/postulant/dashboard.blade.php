@@ -12,8 +12,8 @@
                 <p class="text-indigo-200 text-sm font-bold uppercase tracking-widest mb-1">
                     <i class="fa-solid fa-sun mr-1"></i> Bonjour
                 </p>
-                <h1 class="text-3xl font-extrabold tracking-tight">Dr. Ahmed Benali</h1>
-                <p class="text-indigo-200 mt-2 text-sm">Université des Sciences — Département Informatique</p>
+                <h1 class="text-3xl font-extrabold tracking-tight">{{ $personnel->prenom }} {{ $personnel->nom }}</h1>
+                <p class="text-indigo-200 mt-2 text-sm">{{ $personnel->departement ?? 'Université' }}{{ $personnel->grade ? ' — ' . $personnel->grade : '' }}</p>
             </div>
             <div class="flex gap-3 flex-wrap">
                 <button onclick="Alpine.store('modals').openModal('create-request')"
@@ -31,15 +31,15 @@
     {{-- ── Stat Cards ──────────────────────────────────────── --}}
     <div class="grid grid-cols-2 md:grid-cols-4 gap-5">
         @php
-        $stats = [
-            ['label' => 'Total Soumissions', 'value' => '12', 'icon' => 'fa-layer-group',   'color' => 'indigo',   'bg' => 'bg-indigo-50',  'text' => 'text-indigo-600',  'border' => 'border-indigo-200'],
-            ['label' => 'En Cours',          'value' => '03', 'icon' => 'fa-hourglass-half', 'color' => 'amber',    'bg' => 'bg-amber-50',   'text' => 'text-amber-600',   'border' => 'border-amber-200'],
-            ['label' => 'Approuvées',        'value' => '08', 'icon' => 'fa-circle-check',   'color' => 'emerald',  'bg' => 'bg-emerald-50', 'text' => 'text-emerald-600', 'border' => 'border-emerald-200'],
-            ['label' => 'Rejetées',          'value' => '01', 'icon' => 'fa-circle-xmark',   'color' => 'rose',     'bg' => 'bg-rose-50',    'text' => 'text-rose-600',    'border' => 'border-rose-200'],
+        $statCards = [
+            ['label' => 'Total Soumissions', 'value' => str_pad($stats['total'],     2,'0',STR_PAD_LEFT), 'icon' => 'fa-layer-group',   'bg' => 'bg-indigo-50',  'text' => 'text-indigo-600',  'border' => 'border-indigo-200'],
+            ['label' => 'En Cours',          'value' => str_pad($stats['en_cours'],  2,'0',STR_PAD_LEFT), 'icon' => 'fa-hourglass-half','bg' => 'bg-amber-50',   'text' => 'text-amber-600',   'border' => 'border-amber-200'],
+            ['label' => 'Approuvées',        'value' => str_pad($stats['favorables'],2,'0',STR_PAD_LEFT), 'icon' => 'fa-circle-check',  'bg' => 'bg-emerald-50', 'text' => 'text-emerald-600', 'border' => 'border-emerald-200'],
+            ['label' => 'En Attente',        'value' => str_pad($stats['attente'],   2,'0',STR_PAD_LEFT), 'icon' => 'fa-clock',         'bg' => 'bg-rose-50',    'text' => 'text-rose-600',    'border' => 'border-rose-200'],
         ];
         @endphp
 
-        @foreach($stats as $s)
+        @foreach($statCards as $s)
         <div class="bg-white border {{ $s['border'] }} rounded-2xl p-5 shadow-sm hover:shadow-md transition-all group">
             <div class="flex items-center justify-between mb-4">
                 <div class="{{ $s['bg'] }} {{ $s['text'] }} w-10 h-10 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform">
@@ -61,35 +61,43 @@
             </a>
         </x-slot>
 
-        @php
-        $requests = [
-            ['title' => 'Deep Learning in Medical Imaging',       'type' => 'Journal',        'date' => '2026-04-12', 'reviews' => '2/3', 'status' => 'in_review'],
-            ['title' => 'Blockchain for Decentralized Identity',  'type' => 'Manifestation',  'date' => '2026-03-25', 'reviews' => '3/3', 'status' => 'approved'],
-            ['title' => 'Quantum Computing Optimization',         'type' => 'Journal',        'date' => '2026-03-10', 'reviews' => '1/3', 'status' => 'pending'],
-        ];
-        @endphp
-
+        @if($demandes->isEmpty())
+            <div class="text-center py-12 text-slate-400">
+                <i class="fa-solid fa-inbox text-4xl mb-3 block"></i>
+                <p class="font-bold">Aucune demande soumise pour l'instant.</p>
+                <p class="text-sm mt-1">Cliquez sur « Nouvelle Demande » pour commencer.</p>
+            </div>
+        @else
         <x-table :headers="['Titre', 'Type', 'Date', 'Avis', 'Statut', 'Actions']">
-            @foreach($requests as $req)
+            @foreach($demandes->take(5) as $demande)
+            @php
+                $avisTotal  = $demande->avis->count();
+                $avisRendus = $demande->avis->whereNotNull('resultat')->count();
+                $pct        = $avisTotal > 0 ? ($avisRendus / $avisTotal) * 100 : 0;
+                $type       = $demande->publication?->journal ? 'Journal' : 'Manifestation';
+            @endphp
             <tr class="hover:bg-slate-50 transition-colors">
-                <td class="px-6 py-4 font-bold text-slate-800 max-w-[260px] truncate">{{ $req['title'] }}</td>
+                <td class="px-6 py-4 font-bold text-slate-800 max-w-[260px] truncate">
+                    {{ $demande->publication?->titre ?? 'Sans titre' }}
+                </td>
                 <td class="px-6 py-4">
                     <span class="text-xs font-bold px-2 py-1 rounded-full
-                        {{ $req['type'] === 'Journal' ? 'bg-indigo-100 text-indigo-700' : 'bg-violet-100 text-violet-700' }}">
-                        {{ $req['type'] }}
+                        {{ $type === 'Journal' ? 'bg-indigo-100 text-indigo-700' : 'bg-violet-100 text-violet-700' }}">
+                        {{ $type }}
                     </span>
                 </td>
-                <td class="px-6 py-4 text-slate-500 text-sm italic">{{ $req['date'] }}</td>
+                <td class="px-6 py-4 text-slate-500 text-sm italic">
+                    {{ \Carbon\Carbon::parse($demande->date_demande)->format('d/m/Y') }}
+                </td>
                 <td class="px-6 py-4">
-                    @php $pct = (intval(substr($req['reviews'],0,1))/3)*100; @endphp
                     <div class="w-full bg-slate-100 rounded-full h-1.5 max-w-[80px]">
                         <div class="bg-indigo-500 h-1.5 rounded-full" style="width: {{ $pct }}%"></div>
                     </div>
-                    <span class="text-[10px] text-slate-400 font-bold mt-1 block">{{ $req['reviews'] }} avis</span>
+                    <span class="text-[10px] text-slate-400 font-bold mt-1 block">{{ $avisRendus }}/{{ $avisTotal }} avis</span>
                 </td>
-                <td class="px-6 py-4"><x-badge :status="$req['status']" /></td>
+                <td class="px-6 py-4"><x-badge :status="$demande->statut" /></td>
                 <td class="px-6 py-4">
-                    <a href="/postulant/requests" onclick="event.preventDefault(); navigateTo('postulant/requests')"
+                    <a href="{{ route('postulant.requests') }}"
                        class="text-indigo-600 hover:text-indigo-800 text-xs font-bold flex items-center gap-1">
                         <i class="fa-solid fa-eye"></i> Suivi
                     </a>
@@ -97,6 +105,7 @@
             </tr>
             @endforeach
         </x-table>
+        @endif
     </x-card>
 
 </div>

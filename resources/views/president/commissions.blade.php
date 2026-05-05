@@ -7,29 +7,27 @@
     selectedCommission: null,
     newCommission: { name: '', specialty: '', chef: '', members: [] },
     availableMembers: [
-        { id: 1,  name: 'Pr. Karim Bouziane',       specialty: 'Intelligence Artificielle', grade: 'Professeur' },
-        { id: 2,  name: 'Pr. Hamid El Moussaoui',    specialty: 'Intelligence Artificielle', grade: 'Professeur' },
-        { id: 3,  name: 'Dr. Kamel Ait Ouali',       specialty: 'Machine Learning',          grade: 'MCA' },
-        { id: 4,  name: 'Pr. Nadia Bensalem',        specialty: 'Traitement d\'Images',      grade: 'Professeur' },
-        { id: 5,  name: 'Pr. Fatima Benbouzid',      specialty: 'Intelligence Artificielle', grade: 'Professeur' },
-        { id: 6,  name: 'Dr. Rachid Boudour',        specialty: 'Deep Learning',             grade: 'MCA' },
-        { id: 7,  name: 'Pr. Amel Zenati',           specialty: 'Traitement d\'Images',      grade: 'Professeur' },
-        { id: 8,  name: 'Dr. Mohamed Cheriet',        specialty: 'Vision par Ordinateur',     grade: 'MCA' },
-        { id: 9,  name: 'Pr. Leila Hamdad',          specialty: 'Data Science',              grade: 'Professeur' },
-        { id: 10, name: 'Dr. Youssef Amrani',        specialty: 'Réseaux',                   grade: 'MCA' },
-        { id: 11, name: 'Pr. Lotfi Boualem',         specialty: 'Télécommunications',        grade: 'Professeur' },
-        { id: 12, name: 'Dr. Amira Bekkouche',       specialty: 'Sécurité Informatique',     grade: 'MCA' },
+        @foreach($presidentsDisponibles as $m)
+        { 
+            id: {{ $m->id }},  
+            name: '{!! addslashes($m->prenom . " " . $m->nom) !!}',       
+            specialty: '{!! addslashes($m->specialite ?? "N/A") !!}', 
+            grade: '{!! addslashes($m->grade ?? "N/A") !!}' 
+        },
+        @endforeach
     ],
     commissions: [
-        { id: 1, name: 'Informatique & IA', specialty: 'Intelligence Artificielle, Machine Learning, Deep Learning', chef: { id: 1, name: 'Pr. Karim Bouziane' }, members: [
-            { id: 2, name: 'Pr. Hamid El Moussaoui' },{ id: 3, name: 'Dr. Kamel Ait Ouali' },{ id: 5, name: 'Pr. Fatima Benbouzid' },{ id: 9, name: 'Pr. Leila Hamdad' }
-        ], dossiers: 4, active: true },
-        { id: 2, name: 'Traitement du Signal', specialty: 'Traitement d\'Images, Vision par Ordinateur', chef: { id: 4, name: 'Pr. Nadia Bensalem' }, members: [
-            { id: 7, name: 'Pr. Amel Zenati' },{ id: 8, name: 'Dr. Mohamed Cheriet' }
-        ], dossiers: 2, active: true },
-        { id: 3, name: 'Télécommunications', specialty: 'Réseaux, Sécurité, Télécoms', chef: { id: 11, name: 'Pr. Lotfi Boualem' }, members: [
-            { id: 10, name: 'Dr. Youssef Amrani' },{ id: 12, name: 'Dr. Amira Bekkouche' }
-        ], dossiers: 1, active: true },
+        @foreach($sousCommissions as $c)
+        { 
+            id: {{ $c->id }}, 
+            name: '{!! addslashes($c->nom) !!}', 
+            specialty: '{!! addslashes($c->domaine ?? "") !!}', 
+            chef: { id: {{ $c->president->id ?? "null" }}, name: '{!! addslashes($c->president->prenom ?? "") !!} {!! addslashes($c->president->nom ?? "") !!}' }, 
+            members: [], 
+            dossiers: {{ $c->demandes->count() }}, 
+            active: true 
+        },
+        @endforeach
     ],
     toggleMember(memberId) {
         const idx = this.newCommission.members.indexOf(memberId);

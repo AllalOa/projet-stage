@@ -6,20 +6,29 @@
     decision: '',
     consolidated: false,
     dossier: {
-        id: 'SC-2489',
-        title: 'Ethical Challenges in Modern AI',
-        postulant: 'Pr. Mehdi Boudiaf',
-        grade: 'Professeur',
-        dept: 'Informatique',
-        type: 'Journal',
-        source: 'AI & Society',
-        issn: '0951-5666',
-        date: '2026-04-20',
+        id: 'REQ-{{ str_pad($demande->id, 4, "0", STR_PAD_LEFT) }}',
+        real_id: {{ $demande->id }},
+        title: '{!! addslashes($demande->publication->titre ?? "Sans titre") !!}',
+        postulant: '{!! addslashes($demande->postulant->prenom . " " . $demande->postulant->nom) !!}',
+        grade: '{!! addslashes($demande->postulant->grade ?? "Aucun") !!}',
+        dept: '{!! addslashes($demande->postulant->departement ?? "Aucun") !!}',
+        type: '{{ $demande->publication->journal ? "Journal" : "Manifestation" }}',
+        source: '{!! addslashes($demande->publication->journal->nom_journal ?? "—") !!}',
+        issn: '{!! addslashes($demande->publication->journal->issn ?? "—") !!}',
+        date: '{{ $demande->created_at->format("Y-m-d") }}',
+        pdf_path: '{{ $demande->publication->pdf_path ? asset("storage/" . $demande->publication->pdf_path) : "" }}'
     },
     examiners: [
-        { name: 'Pr. Fatima Benbouzid', specialty: 'Intelligence Artificielle', avis: 'favorable',    comment: 'Excellent article. Méthodologie solide et résultats convaincants. Publication recommandée sans réserve.' },
-        { name: 'Dr. Rachid Boudour',   specialty: 'Deep Learning',             avis: 'defavorable',  comment: 'Manque de profondeur dans l\'analyse comparative. Les benchmarks ne sont pas suffisamment variés. Nécessite une révision majeure.' },
-        { name: 'Pr. Amel Zenati',      specialty: 'Traitement d\'Images',      avis: 'favorable',    comment: 'Très bonne revue de littérature avec une perspective originale. Quelques corrections mineures recommandées sur la section 4.' },
+        @foreach($demande->avis as $avis)
+        @if($avis->resultat)
+        { 
+            name: '{!! addslashes($avis->examinateur->prenom . " " . $avis->examinateur->nom) !!}', 
+            specialty: '{!! addslashes($avis->examinateur->specialite ?? "N/A") !!}', 
+            avis: '{{ $avis->resultat }}',    
+            comment: '{!! addslashes(str_replace(["\n","\r"], [" ",""], $avis->commentaire ?? "")) !!}' 
+        },
+        @endif
+        @endforeach
     ],
     get favorableCount() {
         return this.examiners.filter(e => e.avis === 'favorable').length;
@@ -28,10 +37,7 @@
         return this.examiners.filter(e => e.avis === 'defavorable').length;
     },
     finalize() {
-        if (this.decision && this.recommendation.trim()) {
-            this.consolidated = true;
-            showToast('Dossier consolidé avec succès !');
-        }
+        this.$refs.consolidateForm.submit();
     }
 }">
 
@@ -53,6 +59,9 @@
                 <h2 class="text-xl font-extrabold text-slate-900" x-text="dossier.title"></h2>
                 <p class="text-sm text-slate-500 mt-1">
                     <span x-text="dossier.postulant"></span> · <span x-text="dossier.grade"></span> · <span x-text="dossier.dept"></span>
+                    <template x-if="dossier.pdf_path">
+                        <span> · <a :href="dossier.pdf_path" target="_blank" class="text-indigo-600 hover:text-indigo-800 font-bold"><i class="fa-solid fa-file-pdf text-rose-500"></i> Voir la publication</a></span>
+                    </template>
                 </p>
             </div>
             <div class="text-right">
@@ -147,6 +156,9 @@
             </div>
 
             {{-- ── Recommendation Form ────────────────────────── --}}
+            <form method="POST" :action="'{{ url('/subcommission/consolidate') }}/' + dossier.real_id" x-ref="consolidateForm">
+                @csrf
+                <input type="hidden" name="decision_finale" :value="decision">
             <div class="bg-white border border-slate-200 rounded-2xl shadow-sm overflow-hidden">
                 <div class="px-6 py-4 border-b border-slate-100">
                     <h3 class="text-lg font-bold text-slate-800">Recommandation de la Sous-Commission</h3>
@@ -158,19 +170,19 @@
                     <div>
                         <label class="block text-sm font-bold text-slate-700 mb-3">Avis de la Sous-Commission <span class="text-rose-500">*</span></label>
                         <div class="grid grid-cols-3 gap-3">
-                            <button @click="decision = 'favorable'"
+                            <button type="button" @click="decision = 'favorable'"
                                 class="p-4 border-2 rounded-xl text-center transition-all"
                                 :class="decision === 'favorable' ? 'border-emerald-500 bg-emerald-50' : 'border-slate-200 hover:border-emerald-300'">
                                 <i class="fa-solid fa-thumbs-up text-emerald-500 text-xl mb-2"></i>
                                 <p class="text-sm font-bold text-slate-800">Favorable</p>
                             </button>
-                            <button @click="decision = 'reserve'"
+                            <button type="button" @click="decision = 'reserve'"
                                 class="p-4 border-2 rounded-xl text-center transition-all"
                                 :class="decision === 'reserve' ? 'border-amber-500 bg-amber-50' : 'border-slate-200 hover:border-amber-300'">
                                 <i class="fa-solid fa-triangle-exclamation text-amber-500 text-xl mb-2"></i>
                                 <p class="text-sm font-bold text-slate-800">Avec Réserve</p>
                             </button>
-                            <button @click="decision = 'defavorable'"
+                            <button type="button" @click="decision = 'defavorable'"
                                 class="p-4 border-2 rounded-xl text-center transition-all"
                                 :class="decision === 'defavorable' ? 'border-rose-500 bg-rose-50' : 'border-slate-200 hover:border-rose-300'">
                                 <i class="fa-solid fa-thumbs-down text-rose-500 text-xl mb-2"></i>
@@ -193,7 +205,7 @@
                            class="flex items-center gap-2 text-sm font-bold text-slate-500 hover:text-slate-800 px-4 py-2 rounded-xl hover:bg-slate-100 transition-all">
                             <i class="fa-solid fa-arrow-left"></i> Retour
                         </a>
-                        <button @click="finalize()"
+                        <button type="button" @click="decision && recommendation.trim() ? finalize() : null"
                             :class="decision && recommendation.trim() ? 'bg-indigo-600 hover:bg-indigo-700 text-white shadow-lg shadow-indigo-200' : 'bg-slate-100 text-slate-400 cursor-not-allowed'"
                             class="flex items-center gap-2 text-sm font-bold px-6 py-3 rounded-xl transition-all">
                             <i class="fa-solid fa-file-circle-check"></i> Finaliser la Consolidation
@@ -201,6 +213,7 @@
                     </div>
                 </div>
             </div>
+            </form>
         </div>
     </template>
 

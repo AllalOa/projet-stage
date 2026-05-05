@@ -4,10 +4,12 @@
 <div class="max-w-7xl mx-auto space-y-8" x-data="{
     filter: 'all',
     assignments: [
-        { id: 1, ref: 'SC-2491', title: 'Deep Learning in Medical Imaging',          postulant: 'Dr. Ahmed Benali',   type: 'Journal',       source: 'IEEE Trans. Medical Imaging',  date: '2026-04-30', deadline: '2026-05-15', proposalStatus: 'accepted', reviewStatus: 'pending' },
-        { id: 2, ref: 'SC-2490', title: 'Blockchain for Decentralized Identity',     postulant: 'Dr. Samira Kaci',    type: 'Manifestation', source: 'ICSE 2026',                    date: '2026-04-28', deadline: '2026-05-12', proposalStatus: 'accepted', reviewStatus: 'submitted' },
-        { id: 3, ref: 'SC-2487', title: 'Edge Computing IoT Networks',               postulant: 'Dr. Fatima Zerhouni',type: 'Manifestation', source: 'MobiCom 2026',                 date: '2026-05-01', deadline: '2026-05-18', proposalStatus: 'accepted', reviewStatus: 'pending' },
-        { id: 4, ref: 'SC-2485', title: 'Neural Network Pruning Strategies',         postulant: 'Dr. Youssef Amrani', type: 'Manifestation', source: 'NeurIPS 2026',                 date: '2026-03-15', deadline: '2026-03-30', proposalStatus: 'accepted', reviewStatus: 'submitted' },
+        @foreach($avisEnAttente as $avis)
+        { id: {{ $avis->id_demande }}, ref: 'REQ-{{ str_pad($avis->id_demande, 4, "0", STR_PAD_LEFT) }}', title: '{!! addslashes($avis->demande->publication->titre ?? "Sans titre") !!}', postulant: '{!! addslashes($avis->demande->postulant->prenom . " " . $avis->demande->postulant->nom) !!}', type: '{{ $avis->demande->publication->journal ? "Journal" : "Manifestation" }}', source: '{!! addslashes($avis->demande->publication->journal->nom_journal ?? "") !!}', date: '{{ \Carbon\Carbon::parse($avis->demande->date_demande)->format("Y-m-d") }}', deadline: '{{ \Carbon\Carbon::parse($avis->demande->date_demande)->addDays(15)->format("Y-m-d") }}', proposalStatus: 'accepted', reviewStatus: 'pending' },
+        @endforeach
+        @foreach($avisComplets as $avis)
+        { id: {{ $avis->id_demande }}, ref: 'REQ-{{ str_pad($avis->id_demande, 4, "0", STR_PAD_LEFT) }}', title: '{!! addslashes($avis->demande->publication->titre ?? "Sans titre") !!}', postulant: '{!! addslashes($avis->demande->postulant->prenom . " " . $avis->demande->postulant->nom) !!}', type: '{{ $avis->demande->publication->journal ? "Journal" : "Manifestation" }}', source: '{!! addslashes($avis->demande->publication->journal->nom_journal ?? "") !!}', date: '{{ \Carbon\Carbon::parse($avis->demande->date_demande)->format("Y-m-d") }}', deadline: '{{ \Carbon\Carbon::parse($avis->demande->date_demande)->addDays(15)->format("Y-m-d") }}', proposalStatus: 'accepted', reviewStatus: 'submitted' },
+        @endforeach
     ],
     get filtered() {
         if (this.filter === 'all') return this.assignments;
@@ -35,14 +37,16 @@
                 <p class="text-teal-300 text-sm font-bold uppercase tracking-widest mb-1">
                     <i class="fa-solid fa-microscope mr-1"></i> Espace Examinateur
                 </p>
-                <h1 class="text-3xl font-extrabold tracking-tight">Pr. Hamid El Moussaoui</h1>
-                <p class="text-teal-300/70 mt-2 text-sm">Intelligence Artificielle · LRIA · USTHB</p>
+                <h1 class="text-3xl font-extrabold tracking-tight">{{ $personnel->grade ?? 'Pr.' }} {{ $personnel->prenom }} {{ $personnel->nom }}</h1>
+                <p class="text-teal-300/70 mt-2 text-sm">{{ $personnel->departement ?? 'Département non spécifié' }}</p>
             </div>
             <div class="flex gap-3 flex-wrap">
                 <a href="/examiner/notifications" onclick="event.preventDefault(); navigateTo('examiner/notifications')"
                     class="flex items-center gap-2 bg-white text-teal-800 font-bold px-5 py-3 rounded-xl hover:bg-teal-50 transition-all shadow-lg text-sm">
                     <i class="fa-solid fa-bell"></i> Notifications
-                    <span class="bg-red-500 text-white text-[10px] font-black px-1.5 py-0.5 rounded-full ml-1">2</span>
+                    @if($stats['en_attente'] > 0)
+                    <span class="bg-red-500 text-white text-[10px] font-black px-1.5 py-0.5 rounded-full ml-1">{{ $stats['en_attente'] }}</span>
+                    @endif
                 </a>
             </div>
         </div>
@@ -51,15 +55,15 @@
     {{-- ── Stat Cards ──────────────────────────────────────── --}}
     <div class="grid grid-cols-2 md:grid-cols-4 gap-5">
         @php
-        $stats = [
-            ['label' => 'Total Assignés',     'value' => '04', 'icon' => 'fa-file-signature',  'bg' => 'bg-teal-50',    'text' => 'text-teal-600',    'border' => 'border-teal-200'],
-            ['label' => 'En Attente',          'value' => '02', 'icon' => 'fa-hourglass-half',  'bg' => 'bg-amber-50',   'text' => 'text-amber-600',   'border' => 'border-amber-200'],
-            ['label' => 'Avis Rendus',         'value' => '02', 'icon' => 'fa-check-double',    'bg' => 'bg-emerald-50', 'text' => 'text-emerald-600', 'border' => 'border-emerald-200'],
-            ['label' => 'Délai Urgent',        'value' => '01', 'icon' => 'fa-clock',           'bg' => 'bg-rose-50',    'text' => 'text-rose-600',    'border' => 'border-rose-200'],
+        $statCards = [
+            ['label' => 'Total Assignés',      'value' => str_pad($stats['en_attente'] + $stats['complets'], 2, '0', STR_PAD_LEFT), 'icon' => 'fa-file-signature',  'bg' => 'bg-teal-50',    'text' => 'text-teal-600',    'border' => 'border-teal-200'],
+            ['label' => 'En Attente',          'value' => str_pad($stats['en_attente'], 2, '0', STR_PAD_LEFT), 'icon' => 'fa-hourglass-half',  'bg' => 'bg-amber-50',   'text' => 'text-amber-600',   'border' => 'border-amber-200'],
+            ['label' => 'Avis Rendus',         'value' => str_pad($stats['complets'], 2, '0', STR_PAD_LEFT), 'icon' => 'fa-check-double',    'bg' => 'bg-emerald-50', 'text' => 'text-emerald-600', 'border' => 'border-emerald-200'],
+            ['label' => 'Avis Favorables',     'value' => str_pad($stats['favorables'], 2, '0', STR_PAD_LEFT), 'icon' => 'fa-star',              'bg' => 'bg-indigo-50',  'text' => 'text-indigo-600',  'border' => 'border-indigo-200'],
         ];
         @endphp
 
-        @foreach($stats as $s)
+        @foreach($statCards as $s)
         <div class="bg-white border {{ $s['border'] }} rounded-2xl p-5 shadow-sm hover:shadow-md transition-all group">
             <div class="flex items-center justify-between mb-4">
                 <div class="{{ $s['bg'] }} {{ $s['text'] }} w-10 h-10 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform">

@@ -4,11 +4,19 @@
 <div class="max-w-4xl mx-auto space-y-6" x-data="{
     filter: 'all',
     notifications: [
-        { id: 1, type: 'proposal',       ref: 'SC-2500', title: 'Reinforcement Learning for Autonomous Vehicles',    from: 'Pr. Karim Bouziane',  commission: 'Informatique & IA',  date: '2026-05-03', status: 'new',      read: false },
-        { id: 2, type: 'proposal',       ref: 'SC-2499', title: 'Graph Neural Networks for Drug Discovery',           from: 'Pr. Karim Bouziane',  commission: 'Informatique & IA',  date: '2026-05-02', status: 'new',      read: false },
-        { id: 3, type: 'proposal',       ref: 'SC-2491', title: 'Deep Learning in Medical Imaging',                   from: 'Pr. Karim Bouziane',  commission: 'Informatique & IA',  date: '2026-04-30', status: 'accepted', read: true },
-        { id: 4, type: 'reminder',       ref: 'SC-2491', title: 'Deep Learning in Medical Imaging',                   from: 'Système',             commission: '',                   date: '2026-05-02', status: 'read',     read: true, message: 'Rappel : votre avis est attendu avant le 15/05/2026.' },
-        { id: 5, type: 'proposal',       ref: 'SC-2487', title: 'Edge Computing IoT Networks',                        from: 'Pr. Karim Bouziane',  commission: 'Informatique & IA',  date: '2026-04-28', status: 'declined', read: true },
+        @foreach($nouvelles as $avis)
+        { 
+            id: {{ $avis->id_demande }}, 
+            type: 'proposal',       
+            ref: 'REQ-{{ str_pad($avis->id_demande, 4, "0", STR_PAD_LEFT) }}', 
+            title: '{!! addslashes($avis->demande->publication->titre ?? "Sans titre") !!}',    
+            from: 'Sous-Commission',  
+            commission: '',  
+            date: '{{ $avis->created_at->format("Y-m-d") }}', 
+            status: 'accepted',      
+            read: true 
+        },
+        @endforeach
     ],
     get filtered() {
         if (this.filter === 'all') return this.notifications;
@@ -105,11 +113,9 @@
                         </template>
 
                         {{-- Status display for already responded proposals --}}
-                        <template x-if="notif.type === 'proposal' && (notif.status === 'accepted' || notif.status === 'declined')">
+                        <template x-if="notif.type === 'proposal' && notif.status === 'declined'">
                             <div class="mt-3">
-                                <span class="text-xs font-bold px-3 py-1 rounded-full border"
-                                    :class="notif.status === 'accepted' ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : 'bg-rose-50 text-rose-700 border-rose-200'"
-                                    x-text="notif.status === 'accepted' ? '✅ Acceptée' : '❌ Déclinée'"></span>
+                                <span class="text-xs font-bold px-3 py-1 rounded-full border bg-rose-50 text-rose-700 border-rose-200">❌ Déclinée</span>
                             </div>
                         </template>
                     </div>

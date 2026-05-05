@@ -12,8 +12,8 @@
                 <p class="text-amber-300 text-sm font-bold uppercase tracking-widest mb-1">
                     <i class="fa-solid fa-landmark mr-1"></i> Conseil Scientifique
                 </p>
-                <h1 class="text-3xl font-extrabold tracking-tight">Pr. Mohamed Larbi Khelifi</h1>
-                <p class="text-amber-300/70 mt-2 text-sm">Président du Conseil Scientifique — Université des Sciences</p>
+                <h1 class="text-3xl font-extrabold tracking-tight">{{ $personnel->grade ?? 'Pr.' }} {{ $personnel->prenom }} {{ $personnel->nom }}</h1>
+                <p class="text-amber-300/70 mt-2 text-sm">Président du Conseil Scientifique — {{ $personnel->departement ?? 'Université' }}</p>
             </div>
             <div class="flex gap-3 flex-wrap">
                 <a href="/president/dossiers" onclick="event.preventDefault(); navigateTo('president/dossiers')"
@@ -31,14 +31,14 @@
     {{-- Stat Cards --}}
     <div class="grid grid-cols-2 md:grid-cols-4 gap-5">
         @php
-        $stats = [
-            ['label' => 'Dossiers Reçus',      'value' => '05', 'icon' => 'fa-folder-open',    'bg' => 'bg-amber-50',   'text' => 'text-amber-600',   'border' => 'border-amber-200'],
-            ['label' => 'En Délibération',      'value' => '02', 'icon' => 'fa-scale-balanced',  'bg' => 'bg-indigo-50',  'text' => 'text-indigo-600',  'border' => 'border-indigo-200'],
-            ['label' => 'Décisions Rendues',    'value' => '03', 'icon' => 'fa-gavel',           'bg' => 'bg-emerald-50', 'text' => 'text-emerald-600', 'border' => 'border-emerald-200'],
-            ['label' => 'Sous-Commissions',     'value' => '03', 'icon' => 'fa-sitemap',         'bg' => 'bg-violet-50',  'text' => 'text-violet-600',  'border' => 'border-violet-200'],
+        $statCards = [
+            ['label' => 'Dossiers Transmis',    'value' => str_pad($stats['transmis'], 2, '0', STR_PAD_LEFT),   'icon' => 'fa-folder-open',    'bg' => 'bg-amber-50',   'text' => 'text-amber-600',   'border' => 'border-amber-200'],
+            ['label' => 'En Délibération',      'value' => str_pad($stats['en_cours'], 2, '0', STR_PAD_LEFT),   'icon' => 'fa-scale-balanced', 'bg' => 'bg-indigo-50',  'text' => 'text-indigo-600',  'border' => 'border-indigo-200'],
+            ['label' => 'Avis Favorables',      'value' => str_pad($stats['favorables'], 2, '0', STR_PAD_LEFT), 'icon' => 'fa-check-double',   'bg' => 'bg-emerald-50', 'text' => 'text-emerald-600', 'border' => 'border-emerald-200'],
+            ['label' => 'Total Dossiers',       'value' => str_pad($stats['total'], 2, '0', STR_PAD_LEFT),      'icon' => 'fa-layer-group',    'bg' => 'bg-violet-50',  'text' => 'text-violet-600',  'border' => 'border-violet-200'],
         ];
         @endphp
-        @foreach($stats as $s)
+        @foreach($statCards as $s)
         <div class="bg-white border {{ $s['border'] }} rounded-2xl p-5 shadow-sm hover:shadow-md transition-all group">
             <div class="flex items-center justify-between mb-4">
                 <div class="{{ $s['bg'] }} {{ $s['text'] }} w-10 h-10 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform">
@@ -59,38 +59,45 @@
             </a>
         </x-slot>
 
-        @php
-        $dossiers = [
-            ['id' => 'SC-2489', 'title' => 'Ethical Challenges in Modern AI',       'postulant' => 'Pr. M. Boudiaf',   'commission' => 'Info & IA',   'decision_sc' => 'favorable',  'status' => 'pending'],
-            ['id' => 'SC-2488', 'title' => 'Quantum Computing Optimization',        'postulant' => 'Dr. H. Moussa',    'commission' => 'Info & IA',   'decision_sc' => 'reserve',    'status' => 'pending'],
-            ['id' => 'SC-2485', 'title' => 'Neural Network Pruning Strategies',     'postulant' => 'Dr. Y. Amrani',    'commission' => 'Info & IA',   'decision_sc' => 'favorable',  'status' => 'approved'],
-        ];
-        @endphp
-
+        @if($dernieresDemandes->isEmpty())
+            <div class="text-center py-12 text-slate-400">
+                <i class="fa-solid fa-folder-open text-4xl mb-3 block"></i>
+                <p class="font-bold">Aucun dossier transmis pour l'instant.</p>
+            </div>
+        @else
         <x-table :headers="['Réf.', 'Titre', 'Postulant', 'Commission', 'Avis SC', 'Statut', 'Actions']">
-            @foreach($dossiers as $d)
+            @foreach($dernieresDemandes as $d)
             <tr class="hover:bg-slate-50 transition-colors">
-                <td class="px-6 py-4"><span class="text-[10px] font-black text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded tracking-tighter uppercase">{{ $d['id'] }}</span></td>
-                <td class="px-6 py-4 font-bold text-slate-800 max-w-[220px] truncate">{{ $d['title'] }}</td>
-                <td class="px-6 py-4 text-sm text-slate-600">{{ $d['postulant'] }}</td>
-                <td class="px-6 py-4"><span class="text-xs font-bold bg-violet-100 text-violet-700 px-2 py-1 rounded-lg">{{ $d['commission'] }}</span></td>
+                <td class="px-6 py-4"><span class="text-[10px] font-black text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded tracking-tighter uppercase">REQ-{{ str_pad($d->id, 4, '0', STR_PAD_LEFT) }}</span></td>
+                <td class="px-6 py-4 font-bold text-slate-800 max-w-[220px] truncate">{{ $d->publication?->titre ?? 'Sans titre' }}</td>
+                <td class="px-6 py-4 text-sm text-slate-600">{{ $d->postulant->prenom }} {{ $d->postulant->nom }}</td>
+                <td class="px-6 py-4"><span class="text-xs font-bold bg-violet-100 text-violet-700 px-2 py-1 rounded-lg">{{ $d->sousCommission?->nom ?? '—' }}</span></td>
                 <td class="px-6 py-4">
-                    @php $dc = ['favorable'=>'bg-emerald-50 text-emerald-700 border-emerald-200','reserve'=>'bg-amber-50 text-amber-700 border-amber-200','defavorable'=>'bg-rose-50 text-rose-700 border-rose-200']; @endphp
-                    <span class="text-xs font-bold px-2.5 py-0.5 rounded-full border {{ $dc[$d['decision_sc']] }}">{{ ucfirst($d['decision_sc']) }}</span>
-                </td>
-                <td class="px-6 py-4"><x-badge :status="$d['status']" /></td>
-                <td class="px-6 py-4">
-                    @if($d['status'] === 'pending')
-                        <a href="/president/dossier/{{ str_replace('SC-','',$d['id']) }}" onclick="event.preventDefault(); navigateTo('president/dossier/{{ str_replace('SC-','',$d['id']) }}')" class="text-amber-600 hover:text-amber-800 text-xs font-bold flex items-center gap-1">
-                            <i class="fa-solid fa-gavel"></i> Délibérer
-                        </a>
+                    @php
+                        $dc = [
+                            'favorable'=>'bg-emerald-50 text-emerald-700 border-emerald-200',
+                            'reserve'=>'bg-amber-50 text-amber-700 border-amber-200',
+                            'defavorable'=>'bg-rose-50 text-rose-700 border-rose-200',
+                            '' => 'bg-slate-50 text-slate-500 border-slate-200'
+                        ];
+                        $decision = $d->decision_finale ?? '';
+                    @endphp
+                    @if($decision)
+                        <span class="text-xs font-bold px-2.5 py-0.5 rounded-full border {{ $dc[$decision] }}">{{ ucfirst($decision) }}</span>
                     @else
-                        <span class="text-xs text-slate-400 italic">Décision rendue</span>
+                        <span class="text-xs font-bold px-2.5 py-0.5 rounded-full border bg-slate-50 text-slate-500 border-slate-200">En attente</span>
                     @endif
+                </td>
+                <td class="px-6 py-4"><x-badge :status="$d->statut" /></td>
+                <td class="px-6 py-4">
+                    <a href="{{ route('president.dossier.detail', $d->id) }}" class="text-amber-600 hover:text-amber-800 text-xs font-bold flex items-center gap-1">
+                        <i class="fa-solid fa-gavel"></i> Délibérer
+                    </a>
                 </td>
             </tr>
             @endforeach
         </x-table>
+        @endif
     </x-card>
 
 </div>

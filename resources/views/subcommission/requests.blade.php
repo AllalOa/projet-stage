@@ -1,296 +1,300 @@
 @extends('layouts.app')
 
 @section('content')
-<div class="max-w-7xl mx-auto space-y-6" x-data="{
-    filter: 'all',
-    controlModal: false,
-    selectedRequest: null,
-    checklist: { form: false, resume: false, pdf: false, deadline: false },
-    rejectReason: '',
-    requests: [
-        { id: 'SC-2491', title: 'Deep Learning in Medical Imaging',          postulant: 'Dr. Ahmed Benali',      dept: 'Informatique',        grade: 'Maître de Conférences A', type: 'Journal',       source: 'IEEE Trans. Medical Imaging', issn: '0278-0062', date: '2026-04-28', status: 'pending' },
-        { id: 'SC-2492', title: 'Blockchain for Decentralized Identity',     postulant: 'Dr. Samira Kaci',        dept: 'Informatique',        grade: 'Maître de Conférences B', type: 'Manifestation', source: 'ICSE 2026',                   issn: '',          date: '2026-04-27', status: 'pending' },
-        { id: 'SC-2493', title: 'Quantum Computing Optimization',            postulant: 'Dr. Hamid Moussa',       dept: 'Mathématiques',       grade: 'Professeur',              type: 'Journal',       source: 'Nature Physics',              issn: '1745-2473', date: '2026-04-25', status: 'pending' },
-        { id: 'SC-2494', title: 'Ethical Challenges in Modern AI',           postulant: 'Pr. Mehdi Boudiaf',      dept: 'Informatique',        grade: 'Professeur',              type: 'Journal',       source: 'AI & Society',                issn: '0951-5666', date: '2026-04-22', status: 'recevable' },
-        { id: 'SC-2495', title: 'Edge Computing IoT Optimization',           postulant: 'Dr. Fatima Zerhouni',    dept: 'Télécommunications',  grade: 'Maître de Conférences A', type: 'Manifestation', source: 'MobiCom 2026',                issn: '',          date: '2026-04-20', status: 'recevable' },
-        { id: 'SC-2496', title: 'Neural Architecture Search Survey',         postulant: 'Dr. Youssef Amrani',     dept: 'Informatique',        grade: 'Maître de Conférences B', type: 'Journal',       source: 'JMLR',                        issn: '1533-7928', date: '2026-04-18', status: 'rejected' },
-    ],
-    get filtered() {
-        if (this.filter === 'all') return this.requests;
-        return this.requests.filter(r => r.status === this.filter);
-    },
-    get counts() {
-        return {
-            all: this.requests.length,
-            pending: this.requests.filter(r => r.status === 'pending').length,
-            recevable: this.requests.filter(r => r.status === 'recevable').length,
-            rejected: this.requests.filter(r => r.status === 'rejected').length,
-        };
-    },
-    openControl(req) {
-        this.selectedRequest = req;
-        this.checklist = { form: false, resume: false, pdf: false, deadline: false };
-        this.rejectReason = '';
-        this.controlModal = true;
-    },
-    get allChecked() {
-        return this.checklist.form && this.checklist.resume && this.checklist.pdf && this.checklist.deadline;
-    },
-    markRecevable() {
-        if (this.selectedRequest) {
-            this.selectedRequest.status = 'recevable';
-            this.controlModal = false;
-            showToast('Dossier marqué comme recevable !');
-        }
-    },
-    markRejected() {
-        if (this.selectedRequest && this.rejectReason.trim()) {
-            this.selectedRequest.status = 'rejected';
-            this.controlModal = false;
-            showToast('Dossier rejeté — le postulant sera notifié.', 'error');
-        }
-    }
-}">
 
-    {{-- ── Header ─────────────────────────────────────────── --}}
+@php
+    $requestsData = $demandes->map(function($d) {
+        $statut = $d->statut;
+        if (in_array($statut, ['en_attente', 'reception'])) {
+            $status = 'pending';
+        } elseif ($statut === 'avis') {
+            $status = 'avis';
+        } elseif ($statut === 'consolidation') {
+            $status = 'consolidation';
+        } elseif ($statut === 'transmis') {
+            $status = 'transmis';
+        } else {
+            $status = 'autre';
+        }
+
+        return [
+            'id'             => 'REQ-' . str_pad($d->id, 4, '0', STR_PAD_LEFT),
+            'real_id'        => $d->id,
+            'title'          => $d->publication->titre ?? 'Sans titre',
+            'postulant'      => ($d->postulant->prenom ?? '') . ' ' . ($d->postulant->nom ?? ''),
+            'dept'           => $d->postulant->departement ?? 'Aucun',
+            'grade'          => $d->postulant->grade ?? 'Aucun',
+            'type'           => ($d->publication->journal ? 'Journal' : 'Manifestation'),
+            'source'         => $d->publication->journal->nom_journal ?? '—',
+            'issn'           => $d->publication->journal->issn ?? '—',
+            'facteur_impact' => $d->publication->journal->facteur_impact ?? '—',
+            'auteur'         => $d->publication->auteur_principal ?? '—',
+            'date_pub'       => $d->publication->date_publication ?? '—',
+            'date'           => $d->created_at->format('Y-m-d'),
+            'resume'         => $d->publication->resume ?? '',
+            'pdf_url'        => $d->publication->pdf_path ? asset('storage/' . $d->publication->pdf_path) : '',
+            'avis_count'     => $d->avis->count(),
+            'status'         => $status,
+        ];
+    })->values()->toArray();
+@endphp
+
+<script>
+function subcommissionRequests() {
+    return {
+        filter:   'all',
+        expanded: null,
+        requests: @json($requestsData),
+
+        get filtered() {
+            if (this.filter === 'all') return this.requests;
+            return this.requests.filter(r => r.status === this.filter);
+        },
+
+        get counts() {
+            return {
+                all:           this.requests.length,
+                pending:       this.requests.filter(r => r.status === 'pending').length,
+                avis:          this.requests.filter(r => r.status === 'avis').length,
+                consolidation: this.requests.filter(r => r.status === 'consolidation').length,
+                transmis:      this.requests.filter(r => r.status === 'transmis').length,
+            };
+        },
+
+        toggleExpand(id) {
+            this.expanded = this.expanded === id ? null : id;
+        }
+    };
+}
+</script>
+
+<div class="max-w-7xl mx-auto space-y-6" x-data="subcommissionRequests()">
+
+    {{-- ── Header ──────────────────────────────────────────────── --}}
     <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
             <h1 class="text-2xl font-extrabold text-slate-900 tracking-tight">Demandes Reçues</h1>
-            <p class="text-slate-500 text-sm mt-1">Réception et contrôle de recevabilité des dossiers</p>
+            <p class="text-slate-500 text-sm mt-1">Consultez les dossiers et proposez des examinateurs directement</p>
         </div>
+        @if(session('success'))
+        <div class="flex items-center gap-2 bg-emerald-50 border border-emerald-200 text-emerald-700 text-sm font-bold px-4 py-2 rounded-xl">
+            <i class="fa-solid fa-circle-check"></i> {{ session('success') }}
+        </div>
+        @endif
+        @if(session('error'))
+        <div class="flex items-center gap-2 bg-rose-50 border border-rose-200 text-rose-700 text-sm font-bold px-4 py-2 rounded-xl">
+            <i class="fa-solid fa-circle-xmark"></i> {{ session('error') }}
+        </div>
+        @endif
     </div>
 
-    {{-- ── Filter Tabs ────────────────────────────────────── --}}
+    {{-- ── Filter Tabs ─────────────────────────────────────────── --}}
     <div class="flex gap-2 flex-wrap">
-        <template x-for="[key, label] in [['all','Toutes'],['pending','En attente'],['recevable','Recevable'],['rejected','Non recevable']]" :key="key">
-            <button @click="filter = key"
+        <template x-for="tab in [
+            {key:'all',           label:'Toutes'},
+            {key:'pending',       label:'En attente'},
+            {key:'avis',          label:'En examen'},
+            {key:'consolidation', label:'Consolidé'},
+            {key:'transmis',      label:'Transmis'}
+        ]" :key="tab.key">
+            <button @click="filter = tab.key"
                 class="px-4 py-2 rounded-xl text-sm font-bold transition-all"
-                :class="filter === key ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-200' : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-50'">
-                <span x-text="label"></span>
-                <span class="ml-1 text-xs opacity-70" x-text="'(' + counts[key] + ')'"></span>
+                :class="filter === tab.key
+                    ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-200'
+                    : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-50'">
+                <span x-text="tab.label"></span>
+                <span class="ml-1 text-xs opacity-70" x-text="'(' + counts[tab.key] + ')'"></span>
             </button>
         </template>
     </div>
 
-    {{-- ── Requests Table ─────────────────────────────────── --}}
-    <div class="overflow-x-auto rounded-2xl border border-slate-200 bg-white">
-        <table class="w-full text-left border-collapse">
-            <thead class="bg-slate-50/50 border-b border-slate-200">
-                <tr>
-                    <th class="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-widest">Réf.</th>
-                    <th class="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-widest">Titre</th>
-                    <th class="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-widest">Postulant</th>
-                    <th class="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-widest">Type</th>
-                    <th class="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-widest">Date</th>
-                    <th class="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-widest">Statut</th>
-                    <th class="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-widest">Actions</th>
-                </tr>
-            </thead>
-            <tbody class="divide-y divide-slate-100">
-                <template x-for="req in filtered" :key="req.id">
-                    <tr class="hover:bg-slate-50 transition-colors">
-                        <td class="px-6 py-4">
-                            <span class="text-[10px] font-black text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded tracking-tighter uppercase" x-text="req.id"></span>
-                        </td>
-                        <td class="px-6 py-4 font-bold text-slate-800 max-w-[260px] truncate" x-text="req.title"></td>
-                        <td class="px-6 py-4">
-                            <div class="flex items-center gap-2">
-                                <img :src="'https://ui-avatars.com/api/?name=' + encodeURIComponent(req.postulant) + '&size=24&bg=6366f1&color=fff'" class="w-6 h-6 rounded-full" alt="">
-                                <span class="text-sm text-slate-600" x-text="req.postulant"></span>
-                            </div>
-                        </td>
-                        <td class="px-6 py-4">
-                            <span class="text-xs font-bold px-2 py-1 rounded-full"
-                                :class="req.type === 'Journal' ? 'bg-indigo-100 text-indigo-700' : 'bg-violet-100 text-violet-700'"
-                                x-text="req.type"></span>
-                        </td>
-                        <td class="px-6 py-4 text-slate-500 text-sm italic" x-text="req.date"></td>
-                        <td class="px-6 py-4">
-                            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold border uppercase tracking-wider"
-                                :class="{
-                                    'bg-slate-100 text-slate-600 border-slate-200': req.status === 'pending',
-                                    'bg-emerald-50 text-emerald-600 border-emerald-200': req.status === 'recevable',
-                                    'bg-rose-50 text-rose-600 border-rose-200': req.status === 'rejected',
-                                }">
-                                <span class="w-1.5 h-1.5 rounded-full mr-1.5"
-                                    :class="{
-                                        'bg-slate-400': req.status === 'pending',
-                                        'bg-emerald-500': req.status === 'recevable',
-                                        'bg-rose-500': req.status === 'rejected',
-                                    }"></span>
-                                <span x-text="req.status === 'pending' ? 'En attente' : req.status === 'recevable' ? 'Recevable' : 'Non recevable'"></span>
-                            </span>
-                        </td>
-                        <td class="px-6 py-4">
-                            <template x-if="req.status === 'pending'">
-                                <button @click="openControl(req)"
-                                    class="text-indigo-600 hover:text-indigo-800 text-xs font-bold flex items-center gap-1">
-                                    <i class="fa-solid fa-clipboard-check"></i> Contrôler
-                                </button>
-                            </template>
-                            <template x-if="req.status === 'recevable'">
-                                <a :href="'/subcommission/assign/' + req.id.replace('SC-','')"
-                                   @click.prevent="navigateTo('subcommission/assign/' + req.id.replace('SC-',''))"
-                                   class="text-emerald-600 hover:text-emerald-800 text-xs font-bold flex items-center gap-1">
-                                    <i class="fa-solid fa-user-plus"></i> Proposer Examinateurs
-                                </a>
-                            </template>
-                            <template x-if="req.status === 'rejected'">
-                                <span class="text-xs text-slate-400 italic">Clôturé</span>
-                            </template>
-                        </td>
-                    </tr>
-                </template>
-            </tbody>
-        </table>
-    </div>
+    {{-- ── Requests List ────────────────────────────────────────── --}}
+    <div class="space-y-3">
 
-    {{-- ══════════════════════════════════════════════════════
-         MODAL — Contrôle de Recevabilité
-    ══════════════════════════════════════════════════════ --}}
-    <div x-show="controlModal" x-cloak
-         class="fixed inset-0 z-[60] flex items-center justify-center p-4"
-         x-transition:enter="transition ease-out duration-300"
-         x-transition:enter-start="opacity-0 scale-95"
-         x-transition:enter-end="opacity-100 scale-100"
-         x-transition:leave="transition ease-in duration-200"
-         x-transition:leave-start="opacity-100 scale-100"
-         x-transition:leave-end="opacity-0 scale-95">
-
-        <div class="fixed inset-0 bg-slate-900/40 backdrop-blur-sm" @click="controlModal = false"></div>
-
-        <div class="relative bg-white rounded-3xl shadow-2xl w-full max-w-3xl flex flex-col max-h-[90vh]">
-            {{-- Header --}}
-            <div class="flex items-center justify-between px-8 py-6 border-b border-slate-100">
-                <div>
-                    <h3 class="text-xl font-bold text-slate-900">Contrôle de Recevabilité</h3>
-                    <p class="text-sm text-slate-500 mt-0.5" x-text="selectedRequest?.id"></p>
+        <template x-if="filtered.length === 0">
+            <div class="bg-white border border-slate-200 rounded-2xl p-12 text-center">
+                <div class="w-16 h-16 bg-slate-100 rounded-2xl flex items-center justify-center mx-auto mb-4">
+                    <i class="fa-solid fa-inbox text-slate-400 text-2xl"></i>
                 </div>
-                <button @click="controlModal = false" class="text-slate-400 hover:text-slate-600 p-2 rounded-full hover:bg-slate-100 transition-colors">
-                    <i class="fa-solid fa-xmark text-xl"></i>
-                </button>
+                <p class="font-bold text-slate-500">Aucune demande dans cette catégorie.</p>
             </div>
+        </template>
 
-            {{-- Body --}}
-            <div class="p-8 overflow-y-auto space-y-6">
-                {{-- Postulant Info --}}
-                <div class="bg-slate-50 rounded-2xl p-5">
-                    <h4 class="text-xs font-bold text-slate-400 uppercase tracking-widest mb-3">Informations du Postulant</h4>
-                    <div class="grid grid-cols-2 gap-4 text-sm">
-                        <div>
-                            <span class="text-slate-400 text-xs font-bold">Nom</span>
-                            <p class="font-bold text-slate-800" x-text="selectedRequest?.postulant"></p>
+        <template x-for="req in filtered" :key="req.id">
+            <div class="bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-sm hover:shadow-md transition-shadow">
+
+                {{-- ── Ligne principale (cliquable) ──────────────── --}}
+                <div class="flex items-center justify-between px-6 py-4 cursor-pointer select-none"
+                     @click="toggleExpand(req.id)">
+
+                    <div class="flex items-center gap-4 flex-1 min-w-0">
+                        <span class="text-[10px] font-black text-indigo-600 bg-indigo-50 px-2 py-1 rounded tracking-tighter uppercase shrink-0"
+                              x-text="req.id"></span>
+                        <div class="min-w-0">
+                            <p class="font-bold text-slate-800 truncate text-sm" x-text="req.title"></p>
+                            <p class="text-xs text-slate-400 mt-0.5">
+                                <span x-text="req.postulant"></span>
+                                <span class="mx-1">·</span>
+                                <span class="italic" x-text="req.dept"></span>
+                            </p>
                         </div>
-                        <div>
-                            <span class="text-slate-400 text-xs font-bold">Grade</span>
-                            <p class="font-bold text-slate-800" x-text="selectedRequest?.grade"></p>
+                    </div>
+
+                    <div class="flex items-center gap-3 shrink-0 ml-4">
+                        <span class="text-xs font-bold px-2.5 py-1 rounded-full hidden sm:inline"
+                              :class="req.type === 'Journal' ? 'bg-indigo-100 text-indigo-700' : 'bg-violet-100 text-violet-700'"
+                              x-text="req.type"></span>
+
+                        <span class="text-xs text-slate-400 italic hidden md:inline" x-text="req.date"></span>
+
+                        {{-- Badge statut --}}
+                        <span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold border uppercase tracking-wider"
+                              :class="{
+                                  'bg-amber-50 text-amber-600 border-amber-200':       req.status === 'pending',
+                                  'bg-blue-50 text-blue-600 border-blue-200':          req.status === 'avis',
+                                  'bg-violet-50 text-violet-600 border-violet-200':    req.status === 'consolidation',
+                                  'bg-emerald-50 text-emerald-600 border-emerald-200': req.status === 'transmis',
+                              }">
+                            <span class="w-1.5 h-1.5 rounded-full mr-1.5"
+                                  :class="{
+                                      'bg-amber-400':   req.status === 'pending',
+                                      'bg-blue-500':    req.status === 'avis',
+                                      'bg-violet-500':  req.status === 'consolidation',
+                                      'bg-emerald-500': req.status === 'transmis',
+                                  }"></span>
+                            <span x-text="{
+                                pending:       'En attente',
+                                avis:          'En examen',
+                                consolidation: 'Consolidé',
+                                transmis:      'Transmis'
+                            }[req.status] || req.status"></span>
+                        </span>
+
+                        <i class="fa-solid fa-chevron-down text-slate-400 text-xs transition-transform duration-300"
+                           :class="expanded === req.id ? 'rotate-180' : ''"></i>
+                    </div>
+                </div>
+
+                {{-- ── Panneau expandable ───────────────────────── --}}
+                <div x-show="expanded === req.id"
+                     x-transition:enter="transition ease-out duration-200"
+                     x-transition:enter-start="opacity-0 -translate-y-1"
+                     x-transition:enter-end="opacity-100 translate-y-0"
+                     x-transition:leave="transition ease-in duration-150"
+                     x-transition:leave-start="opacity-100 translate-y-0"
+                     x-transition:leave-end="opacity-0 -translate-y-1"
+                     class="border-t border-slate-100 bg-slate-50/50">
+
+                    <div class="px-6 py-5 space-y-5">
+
+                        {{-- Grille info publication --}}
+                        <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                            <div>
+                                <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Auteur principal</p>
+                                <p class="text-sm font-bold text-slate-700" x-text="req.auteur"></p>
+                            </div>
+                            <div>
+                                <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Journal / Source</p>
+                                <p class="text-sm font-bold text-slate-700" x-text="req.source"></p>
+                            </div>
+                            <div>
+                                <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">ISSN</p>
+                                <p class="text-sm font-bold text-slate-700" x-text="req.issn"></p>
+                            </div>
+                            <div>
+                                <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Facteur d'impact</p>
+                                <p class="text-sm font-bold text-slate-700" x-text="req.facteur_impact"></p>
+                            </div>
+                            <div>
+                                <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Grade</p>
+                                <p class="text-sm font-bold text-slate-700" x-text="req.grade"></p>
+                            </div>
+                            <div>
+                                <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Département</p>
+                                <p class="text-sm font-bold text-slate-700" x-text="req.dept"></p>
+                            </div>
+                            <div>
+                                <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Date publication</p>
+                                <p class="text-sm font-bold text-slate-700" x-text="req.date_pub"></p>
+                            </div>
+                            <div>
+                                <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Avis reçus</p>
+                                <p class="text-sm font-bold text-slate-700" x-text="req.avis_count + ' avis'"></p>
+                            </div>
                         </div>
-                        <div>
-                            <span class="text-slate-400 text-xs font-bold">Département</span>
-                            <p class="font-bold text-slate-800" x-text="selectedRequest?.dept"></p>
-                        </div>
-                        <div>
-                            <span class="text-slate-400 text-xs font-bold">Date de soumission</span>
-                            <p class="font-bold text-slate-800" x-text="selectedRequest?.date"></p>
+
+                        {{-- Résumé --}}
+                        <template x-if="req.resume">
+                            <div>
+                                <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2">
+                                    <i class="fa-solid fa-align-left text-indigo-400 mr-1"></i> Résumé / Abstract
+                                </p>
+                                <div class="bg-white border border-slate-200 rounded-xl px-5 py-4 max-h-40 overflow-y-auto">
+                                    <p class="text-sm text-slate-600 leading-relaxed" x-text="req.resume"></p>
+                                </div>
+                            </div>
+                        </template>
+                        <template x-if="!req.resume">
+                            <p class="text-xs text-slate-400 italic">
+                                <i class="fa-solid fa-circle-exclamation text-amber-400 mr-1"></i> Aucun résumé fourni.
+                            </p>
+                        </template>
+
+                        {{-- Actions --}}
+                        <div class="flex items-center justify-between pt-3 border-t border-slate-200">
+
+                            {{-- Bouton PDF --}}
+                            <div>
+                                <template x-if="req.pdf_url">
+                                    <a :href="req.pdf_url" target="_blank"
+                                       class="inline-flex items-center gap-2 px-4 py-2 bg-rose-50 text-rose-600 border border-rose-200 hover:bg-rose-100 rounded-xl text-sm font-bold transition-all">
+                                        <i class="fa-solid fa-file-pdf text-rose-500"></i>
+                                        Voir le PDF
+                                    </a>
+                                </template>
+                                <template x-if="!req.pdf_url">
+                                    <span class="text-xs text-slate-400 italic flex items-center gap-1">
+                                        <i class="fa-solid fa-file-slash"></i> Aucun PDF joint
+                                    </span>
+                                </template>
+                            </div>
+
+                            {{-- Bouton action principale --}}
+                            <div>
+                                <template x-if="req.status === 'pending'">
+                                    <a :href="'/subcommission/assign/' + req.real_id"
+                                       @click.prevent="navigateTo('subcommission/assign/' + req.real_id)"
+                                       class="inline-flex items-center gap-2 px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-bold rounded-xl transition-all shadow-md shadow-indigo-200">
+                                        <i class="fa-solid fa-user-plus"></i> Assigner des Examinateurs
+                                    </a>
+                                </template>
+                                <template x-if="req.status === 'avis'">
+                                    <a href="/subcommission/reviews"
+                                       @click.prevent="navigateTo('subcommission/reviews')"
+                                       class="inline-flex items-center gap-2 px-5 py-2.5 bg-blue-50 text-blue-700 border border-blue-200 hover:bg-blue-100 text-sm font-bold rounded-xl transition-all">
+                                        <i class="fa-solid fa-comments"></i> Suivre les Avis
+                                    </a>
+                                </template>
+                                <template x-if="req.status === 'consolidation'">
+                                    <a href="/subcommission/transmit"
+                                       @click.prevent="navigateTo('subcommission/transmit')"
+                                       class="inline-flex items-center gap-2 px-5 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-bold rounded-xl transition-all shadow-md shadow-emerald-200">
+                                        <i class="fa-solid fa-paper-plane"></i> Transmettre
+                                    </a>
+                                </template>
+                                <template x-if="req.status === 'transmis'">
+                                    <span class="text-xs text-slate-400 italic flex items-center gap-1">
+                                        <i class="fa-solid fa-check-double text-emerald-500"></i> Transmis au Conseil
+                                    </span>
+                                </template>
+                            </div>
+
                         </div>
                     </div>
                 </div>
 
-                {{-- Publication Info --}}
-                <div class="bg-slate-50 rounded-2xl p-5">
-                    <h4 class="text-xs font-bold text-slate-400 uppercase tracking-widest mb-3">Détails de la Publication</h4>
-                    <div class="grid grid-cols-2 gap-4 text-sm">
-                        <div class="col-span-2">
-                            <span class="text-slate-400 text-xs font-bold">Titre</span>
-                            <p class="font-bold text-slate-800" x-text="selectedRequest?.title"></p>
-                        </div>
-                        <div>
-                            <span class="text-slate-400 text-xs font-bold">Type</span>
-                            <p class="font-bold text-slate-800" x-text="selectedRequest?.type"></p>
-                        </div>
-                        <div>
-                            <span class="text-slate-400 text-xs font-bold">Source</span>
-                            <p class="font-bold text-slate-800" x-text="selectedRequest?.source"></p>
-                        </div>
-                        <div>
-                            <span class="text-slate-400 text-xs font-bold">ISSN</span>
-                            <p class="font-bold text-slate-800" x-text="selectedRequest?.issn || '—'"></p>
-                        </div>
-                    </div>
-                </div>
-
-                {{-- Checklist --}}
-                <div>
-                    <h4 class="text-xs font-bold text-slate-400 uppercase tracking-widest mb-4">
-                        <i class="fa-solid fa-list-check text-indigo-500 mr-1"></i> Checklist de Recevabilité
-                    </h4>
-                    <div class="space-y-3">
-                        <label class="flex items-center gap-3 p-4 bg-white border border-slate-200 rounded-xl hover:bg-slate-50 transition-colors cursor-pointer"
-                               :class="checklist.form ? 'border-emerald-300 bg-emerald-50/30' : ''">
-                            <input type="checkbox" x-model="checklist.form" class="w-5 h-5 text-emerald-600 rounded-lg border-slate-300 focus:ring-emerald-500">
-                            <div>
-                                <p class="font-bold text-sm text-slate-800">Formulaire correctement rempli</p>
-                                <p class="text-xs text-slate-400">Tous les champs obligatoires sont complétés</p>
-                            </div>
-                        </label>
-                        <label class="flex items-center gap-3 p-4 bg-white border border-slate-200 rounded-xl hover:bg-slate-50 transition-colors cursor-pointer"
-                               :class="checklist.resume ? 'border-emerald-300 bg-emerald-50/30' : ''">
-                            <input type="checkbox" x-model="checklist.resume" class="w-5 h-5 text-emerald-600 rounded-lg border-slate-300 focus:ring-emerald-500">
-                            <div>
-                                <p class="font-bold text-sm text-slate-800">Résumé / Abstract joint</p>
-                                <p class="text-xs text-slate-400">Le résumé est présent et lisible</p>
-                            </div>
-                        </label>
-                        <label class="flex items-center gap-3 p-4 bg-white border border-slate-200 rounded-xl hover:bg-slate-50 transition-colors cursor-pointer"
-                               :class="checklist.pdf ? 'border-emerald-300 bg-emerald-50/30' : ''">
-                            <input type="checkbox" x-model="checklist.pdf" class="w-5 h-5 text-emerald-600 rounded-lg border-slate-300 focus:ring-emerald-500">
-                            <div>
-                                <p class="font-bold text-sm text-slate-800">Document PDF de la publication</p>
-                                <p class="text-xs text-slate-400">Le fichier PDF est joint et complet</p>
-                            </div>
-                        </label>
-                        <label class="flex items-center gap-3 p-4 bg-white border border-slate-200 rounded-xl hover:bg-slate-50 transition-colors cursor-pointer"
-                               :class="checklist.deadline ? 'border-emerald-300 bg-emerald-50/30' : ''">
-                            <input type="checkbox" x-model="checklist.deadline" class="w-5 h-5 text-emerald-600 rounded-lg border-slate-300 focus:ring-emerald-500">
-                            <div>
-                                <p class="font-bold text-sm text-slate-800">Délai de soumission respecté</p>
-                                <p class="text-xs text-slate-400">La demande a été déposée dans les délais réglementaires</p>
-                            </div>
-                        </label>
-                    </div>
-                </div>
-
-                {{-- Reject Reason --}}
-                <div x-show="!allChecked" x-transition class="space-y-2">
-                    <label class="block text-sm font-bold text-slate-700">Motif de rejet <span class="text-rose-500">*</span></label>
-                    <textarea x-model="rejectReason" rows="3"
-                        class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-4 focus:ring-rose-100 focus:border-rose-400 outline-none resize-none transition-all"
-                        placeholder="Précisez le motif de non-recevabilité..."></textarea>
-                </div>
             </div>
-
-            {{-- Footer --}}
-            <div class="px-8 py-6 bg-slate-50 border-t border-slate-100 rounded-b-3xl flex justify-between gap-3">
-                <button @click="controlModal = false"
-                    class="inline-flex items-center justify-center font-semibold px-5 py-2.5 text-sm bg-white text-slate-700 border border-slate-200 hover:bg-slate-50 rounded-xl transition-all">
-                    Annuler
-                </button>
-                <div class="flex gap-3">
-                    <button @click="markRejected()"
-                        x-show="!allChecked && rejectReason.trim()"
-                        x-transition
-                        class="inline-flex items-center justify-center font-semibold px-5 py-2.5 text-sm bg-rose-500 text-white hover:bg-rose-600 rounded-xl transition-all shadow-lg shadow-rose-200 gap-2">
-                        <i class="fa-solid fa-xmark"></i> Rejeter le Dossier
-                    </button>
-                    <button @click="markRecevable()"
-                        x-show="allChecked"
-                        x-transition
-                        class="inline-flex items-center justify-center font-semibold px-5 py-2.5 text-sm bg-emerald-500 text-white hover:bg-emerald-600 rounded-xl transition-all shadow-lg shadow-emerald-200 gap-2">
-                        <i class="fa-solid fa-check"></i> Marquer Recevable
-                    </button>
-                </div>
-            </div>
-        </div>
+        </template>
     </div>
 
 </div>

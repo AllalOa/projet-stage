@@ -104,7 +104,8 @@
          x-transition:enter="transition ease-out duration-300" x-transition:enter-start="opacity-0" x-transition:enter-end="opacity-100"
          x-transition:leave="transition ease-in duration-200" x-transition:leave-start="opacity-100" x-transition:leave-end="opacity-0">
         <div class="fixed inset-0 bg-slate-900/40 backdrop-blur-sm" @click="showFormModal = false"></div>
-        <div class="relative bg-white rounded-3xl shadow-2xl w-full max-w-lg max-h-[85vh] overflow-y-auto">
+        <form method="POST" action="{{ route('admin.users.create') }}" class="relative bg-white rounded-3xl shadow-2xl w-full max-w-lg max-h-[85vh] overflow-y-auto">
+            @csrf
             <div class="p-8 space-y-5">
                 <div class="text-center">
                     <div class="w-14 h-14 rounded-2xl flex items-center justify-center mx-auto mb-4"
@@ -115,20 +116,26 @@
                 </div>
 
                 {{-- Name --}}
-                <div>
-                    <label class="block text-sm font-bold text-slate-700 mb-1">Nom complet <span class="text-rose-500">*</span></label>
-                    <input type="text" x-model="form.name" class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-4 focus:ring-slate-100 focus:border-slate-500 outline-none text-sm" placeholder="Pr. Mohamed Larbi">
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm font-bold text-slate-700 mb-1">Nom <span class="text-rose-500">*</span></label>
+                        <input type="text" name="nom" x-model="form.nom" class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-4 focus:ring-slate-100 outline-none text-sm" placeholder="Ex: Boudiaf">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-bold text-slate-700 mb-1">Prénom <span class="text-rose-500">*</span></label>
+                        <input type="text" name="prenom" x-model="form.prenom" class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-4 focus:ring-slate-100 outline-none text-sm" placeholder="Ex: Mehdi">
+                    </div>
                 </div>
 
                 {{-- Email & Phone --}}
                 <div class="grid grid-cols-2 gap-4">
                     <div>
                         <label class="block text-sm font-bold text-slate-700 mb-1">Email <span class="text-rose-500">*</span></label>
-                        <input type="email" x-model="form.email" class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-4 focus:ring-slate-100 outline-none text-sm" placeholder="email@univ.dz">
+                        <input type="email" name="email" x-model="form.email" class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-4 focus:ring-slate-100 outline-none text-sm" placeholder="email@univ.dz">
                     </div>
                     <div>
                         <label class="block text-sm font-bold text-slate-700 mb-1">Téléphone</label>
-                        <input type="tel" x-model="form.phone" class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-4 focus:ring-slate-100 outline-none text-sm" placeholder="05XX XX XX XX">
+                        <input type="tel" name="phone" x-model="form.phone" class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-4 focus:ring-slate-100 outline-none text-sm" placeholder="05XX XX XX XX">
                     </div>
                 </div>
 
@@ -138,13 +145,13 @@
                         <span x-text="editMode ? 'Nouveau mot de passe (laisser vide pour ne pas changer)' : 'Mot de passe'"></span>
                         <span class="text-rose-500" x-show="!editMode">*</span>
                     </label>
-                    <input type="password" x-model="form.password" class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-4 focus:ring-slate-100 outline-none text-sm" placeholder="••••••••">
+                    <input type="password" name="password" x-model="form.password" class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-4 focus:ring-slate-100 outline-none text-sm" placeholder="••••••••">
                 </div>
 
                 {{-- Role --}}
                 <div>
                     <label class="block text-sm font-bold text-slate-700 mb-1">Rôle <span class="text-rose-500">*</span></label>
-                    <select x-model="form.role" class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-4 focus:ring-slate-100 outline-none text-sm font-bold">
+                    <select name="role" x-model="form.role" class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-4 focus:ring-slate-100 outline-none text-sm font-bold">
                         <option value="">— Sélectionner un rôle —</option>
                         <option value="postulant">Postulant</option>
                         <option value="examiner">Examinateur</option>
@@ -154,10 +161,16 @@
                     </select>
                 </div>
 
-                {{-- Department --}}
-                <div>
-                    <label class="block text-sm font-bold text-slate-700 mb-1">Département</label>
-                    <input type="text" x-model="form.dept" class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-4 focus:ring-slate-100 outline-none text-sm" placeholder="Ex: Informatique">
+                {{-- Department & Grade --}}
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm font-bold text-slate-700 mb-1">Département</label>
+                        <input type="text" name="departement" x-model="form.dept" class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-4 focus:ring-slate-100 outline-none text-sm" placeholder="Ex: Informatique">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-bold text-slate-700 mb-1">Grade</label>
+                        <input type="text" name="grade" x-model="form.grade" class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-4 focus:ring-slate-100 outline-none text-sm" placeholder="Ex: Professeur">
+                    </div>
                 </div>
 
                 {{-- Active toggle --}}
@@ -175,8 +188,8 @@
 
                 {{-- Actions --}}
                 <div class="flex gap-3 justify-end pt-4 border-t border-slate-100">
-                    <button @click="showFormModal = false" class="px-5 py-2.5 text-sm font-bold bg-white text-slate-700 border border-slate-200 hover:bg-slate-50 rounded-xl transition-all">Annuler</button>
-                    <button @click="saveUser()"
+                    <button type="button" @click="showFormModal = false" class="px-5 py-2.5 text-sm font-bold bg-white text-slate-700 border border-slate-200 hover:bg-slate-50 rounded-xl transition-all">Annuler</button>
+                    <button type="submit"
                         :class="canSave() ? 'bg-slate-800 hover:bg-slate-900 text-white shadow-lg' : 'bg-slate-100 text-slate-400 cursor-not-allowed'"
                         class="px-6 py-2.5 text-sm font-bold rounded-xl transition-all flex items-center gap-2">
                         <i class="fa-solid" :class="editMode ? 'fa-save' : 'fa-plus'"></i>
@@ -184,7 +197,7 @@
                     </button>
                 </div>
             </div>
-        </div>
+        </form>
     </div>
 
     {{-- ══ MODAL: Delete Confirmation ══ --}}
@@ -192,19 +205,21 @@
          x-transition:enter="transition ease-out duration-300" x-transition:enter-start="opacity-0" x-transition:enter-end="opacity-100"
          x-transition:leave="transition ease-in duration-200" x-transition:leave-start="opacity-100" x-transition:leave-end="opacity-0">
         <div class="fixed inset-0 bg-slate-900/40 backdrop-blur-sm" @click="showDeleteModal = false"></div>
-        <div class="relative bg-white rounded-3xl shadow-2xl w-full max-w-md">
+        <form method="POST" :action="'{{ url('/admin/users') }}/' + deleteTarget?.id" class="relative bg-white rounded-3xl shadow-2xl w-full max-w-md">
+            @csrf
+            @method('DELETE')
             <div class="p-8 text-center space-y-4">
                 <div class="w-14 h-14 bg-rose-100 rounded-2xl flex items-center justify-center mx-auto"><i class="fa-solid fa-trash text-rose-600 text-xl"></i></div>
                 <h3 class="text-xl font-bold text-slate-900">Supprimer le compte</h3>
                 <p class="text-sm text-slate-500">Êtes-vous sûr de vouloir supprimer le compte de <strong x-text="deleteTarget?.name"></strong> ? Cette action est irréversible.</p>
                 <div class="flex gap-3 justify-center pt-2">
-                    <button @click="showDeleteModal = false" class="px-5 py-2.5 text-sm font-bold bg-white text-slate-700 border border-slate-200 hover:bg-slate-50 rounded-xl transition-all">Annuler</button>
-                    <button @click="deleteUser()" class="px-6 py-2.5 text-sm font-bold bg-rose-600 text-white hover:bg-rose-700 rounded-xl transition-all shadow-lg shadow-rose-200 flex items-center gap-2">
+                    <button type="button" @click="showDeleteModal = false" class="px-5 py-2.5 text-sm font-bold bg-white text-slate-700 border border-slate-200 hover:bg-slate-50 rounded-xl transition-all">Annuler</button>
+                    <button type="submit" class="px-6 py-2.5 text-sm font-bold bg-rose-600 text-white hover:bg-rose-700 rounded-xl transition-all shadow-lg shadow-rose-200 flex items-center gap-2">
                         <i class="fa-solid fa-trash"></i> Supprimer
                     </button>
                 </div>
             </div>
-        </div>
+        </form>
     </div>
 </div>
 
@@ -217,18 +232,20 @@ function usersAdmin() {
         showDeleteModal: false,
         editMode: false,
         deleteTarget: null,
-        form: { id: null, name: '', email: '', phone: '', password: '', role: '', dept: '', active: true },
+        form: { id: null, nom: '', prenom: '', email: '', phone: '', password: '', role: '', dept: '', grade: '', active: true },
         users: [
-            { id: 1,  name: 'Pr. Mehdi Boudiaf',        email: 'boudiaf@univ.dz',       phone: '0551 23 45 67', role: 'postulant',         dept: 'Informatique',        active: true,  created: '2026-01-15' },
-            { id: 2,  name: 'Dr. Ahmed Benali',          email: 'benali@univ.dz',        phone: '0661 34 56 78', role: 'postulant',         dept: 'Informatique',        active: true,  created: '2026-02-20' },
-            { id: 3,  name: 'Dr. Samira Kaci',           email: 'kaci@univ.dz',          phone: '0770 45 67 89', role: 'postulant',         dept: 'Informatique',        active: true,  created: '2026-03-10' },
-            { id: 4,  name: 'Pr. Hamid El Moussaoui',    email: 'elmoussaoui@usthb.dz',  phone: '0551 78 90 12', role: 'examiner',          dept: 'Intelligence Artificielle', active: true,  created: '2025-09-01' },
-            { id: 5,  name: 'Pr. Fatima Benbouzid',      email: 'benbouzid@usthb.dz',    phone: '0661 89 01 23', role: 'examiner',          dept: 'Intelligence Artificielle', active: true,  created: '2025-09-01' },
-            { id: 6,  name: 'Dr. Rachid Boudour',        email: 'boudour@univ-annaba.dz', phone: '0770 90 12 34', role: 'examiner',          dept: 'Deep Learning',       active: true,  created: '2025-10-15' },
-            { id: 7,  name: 'Pr. Amel Zenati',           email: 'zenati@esi.dz',         phone: '',              role: 'examiner',          dept: 'Traitement d\'Images', active: false, created: '2025-10-15' },
-            { id: 8,  name: 'Pr. Karim Bouziane',        email: 'bouziane@usthb.dz',     phone: '0551 56 78 90', role: 'president-sub',     dept: 'Informatique & IA',   active: true,  created: '2025-06-01' },
-            { id: 9,  name: 'Pr. Nadia Bensalem',        email: 'bensalem@univ-blida.dz', phone: '0661 67 89 01', role: 'president-sub',     dept: 'Traitement du Signal', active: true,  created: '2025-06-01' },
-            { id: 10, name: 'Pr. M. L. Khelifi',         email: 'khelifi@univ.dz',       phone: '0551 12 34 56', role: 'president-council', dept: 'Direction',           active: true,  created: '2025-01-01' },
+            @foreach($personnels as $u)
+            {
+                id: {{ $u->id }},
+                name: '{!! addslashes(($u->grade ? $u->grade . ' ' : '') . $u->prenom . ' ' . $u->nom) !!}',
+                email: '{{ addslashes($u->email) }}',
+                phone: '{{ addslashes($u->phone ?? '') }}',
+                role: '{{ $u->role }}',
+                dept: '{!! addslashes($u->departement ?? '') !!}',
+                active: true,
+                created: '{{ $u->created_at ? \Carbon\Carbon::parse($u->created_at)->format("Y-m-d") : "" }}'
+            },
+            @endforeach
         ],
         get filteredUsers() {
             return this.users.filter(u => {
@@ -254,7 +271,7 @@ function usersAdmin() {
         },
         openCreate() {
             this.editMode = false;
-            this.form = { id: null, name: '', email: '', phone: '', password: '', role: '', dept: '', active: true };
+            this.form = { id: null, nom: '', prenom: '', email: '', phone: '', password: '', role: '', dept: '', grade: '', active: true };
             this.showFormModal = true;
         },
         openEdit(user) {
@@ -263,7 +280,7 @@ function usersAdmin() {
             this.showFormModal = true;
         },
         canSave() {
-            if (!this.form.name || !this.form.email || !this.form.role) return false;
+            if (!this.form.nom || !this.form.prenom || !this.form.email || !this.form.role) return false;
             if (!this.editMode && !this.form.password) return false;
             return true;
         },
