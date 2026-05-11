@@ -8,6 +8,7 @@ use Illuminate\Support\Facades\Hash;
 use App\Models\Demande;
 use App\Models\Publication;
 use App\Models\Journal;
+use App\Models\Manifestation;
 use App\Models\SousCommission;
 
 class PostulantController extends Controller
@@ -18,7 +19,7 @@ class PostulantController extends Controller
     public function dashboard()
     {
         $personnel = Auth::user();
-        $demandes  = Demande::with(['publication.journal', 'sousCommission'])
+        $demandes  = Demande::with(['publication.journal', 'publication.manifestation', 'sousCommission'])
             ->where('id_postulant', $personnel->id)
             ->latest()
             ->get();
@@ -31,7 +32,9 @@ class PostulantController extends Controller
             'attente'   => $demandes->where('statut', 'en_attente')->count(),
         ];
 
-        return view('postulant.dashboard', compact('personnel', 'demandes', 'stats'));
+        $sousCommissions = SousCommission::all();
+
+        return view('postulant.dashboard', compact('personnel', 'demandes', 'stats', 'sousCommissions'));
     }
 
     /**
@@ -94,7 +97,7 @@ class PostulantController extends Controller
     public function showRequests()
     {
         $personnel       = Auth::user();
-        $demandes        = Demande::with(['publication.journal', 'sousCommission', 'avis'])
+        $demandes        = Demande::with(['publication.journal', 'publication.manifestation', 'sousCommission', 'avis'])
             ->where('id_postulant', $personnel->id)
             ->latest()
             ->get();
@@ -111,17 +114,33 @@ class PostulantController extends Controller
         $personnel = Auth::user();
 
         $validated = $request->validate([
-            'titre'            => 'required|string|max:255',
-            'auteur_principal' => 'required|string|max:255',
-            'date_publication' => 'required|date',
-            'resume'           => 'nullable|string',
-            'id_sous_comm'     => 'required|exists:sous_commissions,id',
-            'nom_journal'      => 'nullable|string|max:255',
-            'issn'             => 'nullable|string|max:20',
-            'facteur_impact'   => 'nullable|numeric|min:0',
-            'lien_url'         => 'nullable|url',
-            'pdf'              => 'nullable|file|mimes:pdf|max:10240',
+            'type_publication'   => 'required|in:journal,manifestation',
+            'titre'              => 'required|string|max:255',
+            'auteur_principal'   => 'required|string|max:255',
+            'date_publication'   => 'required|date',
+            'resume'             => 'nullable|string',
+            'id_sous_comm'       => 'required|exists:sous_commissions,id',
+            // Champs Journal
+            'nom_journal'        => 'nullable|string|max:255',
+            'issn'               => 'nullable|string|max:20',
+            'facteur_impact'     => 'nullable|numeric|min:0',
+            'lien_url'           => 'nullable|url',
+            // Champs Manifestation
+            'nom_manifestation'  => 'nullable|string|max:255',
+            'type_manifestation' => 'nullable|string|max:50',
+            'date_event'         => 'nullable|date',
+            'lieu'               => 'nullable|string|max:255',
+            // PDF
+            'pdf'                => 'required|file|mimes:pdf|max:10240',
         ]);
+
+        // Vérification manuelle des champs requis selon le type
+        if ($validated['type_publication'] === 'journal' && empty($validated['nom_journal'])) {
+            return back()->withErrors(['nom_journal' => 'Le nom du journal est obligatoire.'])->withInput();
+        }
+        if ($validated['type_publication'] === 'manifestation' && empty($validated['nom_manifestation'])) {
+            return back()->withErrors(['nom_manifestation' => 'Le nom de la manifestation est obligatoire.'])->withInput();
+        }
 
         // 1. Créer la Demande
         $demande = Demande::create([
@@ -131,11 +150,8 @@ class PostulantController extends Controller
             'statut'       => 'en_attente',
         ]);
 
-        // 2. Créer la Publication
-        $pdfPath = null;
-        if ($request->hasFile('pdf')) {
-            $pdfPath = $request->file('pdf')->store('publications', 'public');
-        }
+        // 2. Créer la Publication (base commune)
+        $pdfPath = $request->file('pdf')->store('publications', 'public');
 
         $publication = Publication::create([
             'id_demande'       => $demande->id,
@@ -146,14 +162,22 @@ class PostulantController extends Controller
             'pdf_path'         => $pdfPath,
         ]);
 
-        // 3. Créer le Journal si renseigné
-        if (!empty($validated['nom_journal'])) {
+        // 3. Créer la spécialisation selon le type
+        if ($validated['type_publication'] === 'journal') {
             Journal::create([
-                'id_publication'  => $publication->id,
-                'nom_journal'     => $validated['nom_journal'],
-                'issn'            => $validated['issn'] ?? null,
-                'facteur_impact'  => $validated['facteur_impact'] ?? null,
-                'lien_url'        => $validated['lien_url'] ?? null,
+                'id_publication' => $publication->id,
+                'nom_journal'    => $validated['nom_journal'],
+                'issn'           => $validated['issn'] ?? null,
+                'facteur_impact' => $validated['facteur_impact'] ?? null,
+                'lien_url'       => $validated['lien_url'] ?? null,
+            ]);
+        } else {
+            Manifestation::create([
+                'id_publication'    => $publication->id,
+                'nom_manifestation' => $validated['nom_manifestation'],
+                'type_manifestation'=> $validated['type_manifestation'] ?? null,
+                'date_event'        => $validated['date_event'] ?? null,
+                'lieu'              => $validated['lieu'] ?? null,
             ]);
         }
 

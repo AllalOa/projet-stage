@@ -36,14 +36,6 @@
             </div>
         </div>
 
-        {{-- Logout rapide --}}
-        <form method="POST" action="{{ route('logout') }}" class="ml-1">
-            @csrf
-            <button type="submit"
-                title="Déconnexion"
-                class="p-2 text-slate-400 hover:text-red-500 rounded-lg hover:bg-red-50 transition-colors">
-                <i class="fa-solid fa-right-from-bracket text-lg"></i>
-            </button>
-        </form>
+
     </div>
 </header>

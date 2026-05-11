@@ -20,11 +20,13 @@
         return [
             'id'       => $d->id,
             'title'    => $d->publication->titre ?? 'Sans titre',
-            'type'     => $d->publication->journal ? 'Journal' : 'Manifestation',
+            'type'     => $d->publication->journal ? 'Journal' : ($d->publication->manifestation ? 'Manifestation' : '—'),
             'date'     => $d->created_at->format('Y-m-d'),
             'reviews'  => $d->avis->count() . '/3',
             'status'   => $status,
-            'source'   => $d->publication->journal->nom_journal ?? 'Conférence',
+            'source'   => $d->publication->journal->nom_journal
+                       ?? $d->publication->manifestation->nom_manifestation
+                       ?? '—',
             'issn'     => $d->publication->journal->issn ?? '—',
             'abstract' => $d->publication->resume ?? '',
             'pdf_path' => $d->publication->pdf_path ? asset('storage/' . $d->publication->pdf_path) : '',
@@ -102,6 +104,22 @@ function postulantRequests() {
     <div class="flex items-center gap-2 bg-emerald-50 border border-emerald-200 text-emerald-700 text-sm font-bold px-4 py-3 rounded-xl">
         <i class="fa-solid fa-circle-check"></i> {{ session('success') }}
     </div>
+    @endif
+
+    @if($errors->any())
+    <div class="flex items-start gap-2 bg-rose-50 border border-rose-200 text-rose-700 text-sm font-bold px-4 py-3 rounded-xl">
+        <i class="fa-solid fa-triangle-exclamation mt-0.5"></i>
+        <div>
+            <p class="font-black">Erreur de soumission — veuillez corriger :</p>
+            <ul class="mt-1 font-normal list-disc list-inside">
+                @foreach($errors->all() as $error)
+                    <li>{{ $error }}</li>
+                @endforeach
+            </ul>
+        </div>
+    </div>
+    {{-- Ré-ouvrir le modal si erreur --}}
+    <script>document.addEventListener('DOMContentLoaded',function(){document.getElementById('new-request-modal').classList.remove('hidden');});</script>
     @endif
 
     {{-- Filter Tabs --}}
@@ -286,55 +304,172 @@ function postulantRequests() {
                 <i class="fa-solid fa-xmark text-xl"></i>
             </button>
         </div>
-        <form method="POST" action="{{ route('postulant.requests.submit') }}" enctype="multipart/form-data" class="p-8 space-y-5">
+
+        <form method="POST" action="{{ route('postulant.requests.submit') }}" enctype="multipart/form-data"
+              class="p-8 space-y-5" x-data="{ typePublication: 'journal' }">
             @csrf
+
+            {{-- Erreurs inline --}}
+            @if($errors->any())
+            <div class="flex items-start gap-2 bg-rose-50 border border-rose-200 text-rose-700 text-sm px-4 py-3 rounded-xl mb-2">
+                <i class="fa-solid fa-circle-exclamation mt-0.5"></i>
+                <ul class="list-disc list-inside">
+                    @foreach($errors->all() as $error)
+                        <li>{{ $error }}</li>
+                    @endforeach
+                </ul>
+            </div>
+            @endif
+
+            {{-- ① Type de publication --}}
+            <div>
+                <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-3">
+                    Type de publication <span class="text-rose-500">*</span>
+                </label>
+                <div class="flex gap-3">
+                    <label class="flex-1 cursor-pointer">
+                        <input type="radio" name="type_publication" value="journal"
+                               x-model="typePublication" class="sr-only">
+                        <div class="flex items-center gap-3 px-4 py-3 rounded-xl border-2 transition-all"
+                             :class="typePublication === 'journal'
+                                ? 'border-indigo-500 bg-indigo-50 text-indigo-700'
+                                : 'border-slate-200 bg-slate-50 text-slate-500 hover:border-slate-300'">
+                            <i class="fa-solid fa-book-open text-lg"></i>
+                            <div>
+                                <p class="font-bold text-sm">Article de Journal</p>
+                                <p class="text-xs opacity-70">Revue scientifique, ISSN</p>
+                            </div>
+                        </div>
+                    </label>
+                    <label class="flex-1 cursor-pointer">
+                        <input type="radio" name="type_publication" value="manifestation"
+                               x-model="typePublication" class="sr-only">
+                        <div class="flex items-center gap-3 px-4 py-3 rounded-xl border-2 transition-all"
+                             :class="typePublication === 'manifestation'
+                                ? 'border-violet-500 bg-violet-50 text-violet-700'
+                                : 'border-slate-200 bg-slate-50 text-slate-500 hover:border-slate-300'">
+                            <i class="fa-solid fa-users-line text-lg"></i>
+                            <div>
+                                <p class="font-bold text-sm">Manifestation</p>
+                                <p class="text-xs opacity-70">Congrès, séminaire, colloque</p>
+                            </div>
+                        </div>
+                    </label>
+                </div>
+            </div>
+
+            {{-- ② Champs communs --}}
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div class="md:col-span-2">
                     <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Titre de la publication <span class="text-rose-500">*</span></label>
-                    <input type="text" name="titre" required class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-4 focus:ring-indigo-100 focus:border-indigo-500 outline-none text-sm">
+                    <input type="text" name="titre" required
+                           class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-4 focus:ring-indigo-100 focus:border-indigo-500 outline-none text-sm">
                 </div>
                 <div>
                     <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Auteur Principal <span class="text-rose-500">*</span></label>
-                    <input type="text" name="auteur_principal" required class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-4 focus:ring-indigo-100 focus:border-indigo-500 outline-none text-sm">
+                    <input type="text" name="auteur_principal" required
+                           class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-4 focus:ring-indigo-100 focus:border-indigo-500 outline-none text-sm">
                 </div>
                 <div>
                     <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Date de Publication <span class="text-rose-500">*</span></label>
-                    <input type="date" name="date_publication" required class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-4 focus:ring-indigo-100 focus:border-indigo-500 outline-none text-sm">
+                    <input type="date" name="date_publication" required
+                           class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-4 focus:ring-indigo-100 focus:border-indigo-500 outline-none text-sm">
                 </div>
                 <div class="md:col-span-2">
                     <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Sous-Commission <span class="text-rose-500">*</span></label>
-                    <select name="id_sous_comm" required class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-4 focus:ring-indigo-100 focus:border-indigo-500 outline-none text-sm">
+                    <select name="id_sous_comm" required
+                            class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-4 focus:ring-indigo-100 focus:border-indigo-500 outline-none text-sm">
                         <option value="">Sélectionner une sous-commission</option>
                         @foreach($sousCommissions as $sc)
                             <option value="{{ $sc->id }}">{{ $sc->nom }}</option>
                         @endforeach
                     </select>
                 </div>
-                <div class="md:col-span-2">
-                    <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Nom du Journal / Conférence</label>
-                    <input type="text" name="nom_journal" class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-4 focus:ring-indigo-100 focus:border-indigo-500 outline-none text-sm">
-                </div>
-                <div>
-                    <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">ISSN</label>
-                    <input type="text" name="issn" class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-4 focus:ring-indigo-100 focus:border-indigo-500 outline-none text-sm">
-                </div>
-                <div>
-                    <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Facteur d'impact</label>
-                    <input type="number" step="0.01" name="facteur_impact" class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-4 focus:ring-indigo-100 focus:border-indigo-500 outline-none text-sm">
-                </div>
-                <div class="md:col-span-2">
-                    <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Lien URL</label>
-                    <input type="url" name="lien_url" class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-4 focus:ring-indigo-100 focus:border-indigo-500 outline-none text-sm">
-                </div>
-                <div class="md:col-span-2">
-                    <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Résumé (Abstract)</label>
-                    <textarea name="resume" rows="3" class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-4 focus:ring-indigo-100 focus:border-indigo-500 outline-none text-sm"></textarea>
-                </div>
-                <div class="md:col-span-2">
-                    <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Fichier PDF <span class="text-rose-500">*</span></label>
-                    <input type="file" name="pdf" accept="application/pdf" required class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl outline-none text-sm">
+            </div>
+
+            {{-- ③ Champs Journal (conditionnels) --}}
+            <div x-show="typePublication === 'journal'" x-transition class="space-y-4 p-4 bg-indigo-50/60 rounded-2xl border border-indigo-100">
+                <p class="text-xs font-black text-indigo-600 uppercase tracking-wider flex items-center gap-2">
+                    <i class="fa-solid fa-book-open"></i> Informations du Journal
+                </p>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div class="md:col-span-2">
+                        <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Nom du Journal <span class="text-rose-500">*</span></label>
+                        <input type="text" name="nom_journal"
+                               :required="typePublication === 'journal'"
+                               class="w-full px-4 py-3 bg-white border border-slate-200 rounded-xl focus:ring-4 focus:ring-indigo-100 focus:border-indigo-500 outline-none text-sm">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">ISSN</label>
+                        <input type="text" name="issn"
+                               class="w-full px-4 py-3 bg-white border border-slate-200 rounded-xl focus:ring-4 focus:ring-indigo-100 focus:border-indigo-500 outline-none text-sm">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Facteur d'impact</label>
+                        <input type="number" step="0.01" name="facteur_impact"
+                               class="w-full px-4 py-3 bg-white border border-slate-200 rounded-xl focus:ring-4 focus:ring-indigo-100 focus:border-indigo-500 outline-none text-sm">
+                    </div>
+                    <div class="md:col-span-2">
+                        <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Lien URL</label>
+                        <input type="url" name="lien_url"
+                               class="w-full px-4 py-3 bg-white border border-slate-200 rounded-xl focus:ring-4 focus:ring-indigo-100 focus:border-indigo-500 outline-none text-sm">
+                    </div>
                 </div>
             </div>
+
+            {{-- ④ Champs Manifestation (conditionnels) --}}
+            <div x-show="typePublication === 'manifestation'" x-transition class="space-y-4 p-4 bg-violet-50/60 rounded-2xl border border-violet-100">
+                <p class="text-xs font-black text-violet-600 uppercase tracking-wider flex items-center gap-2">
+                    <i class="fa-solid fa-users-line"></i> Informations de la Manifestation
+                </p>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div class="md:col-span-2">
+                        <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Nom de la Manifestation <span class="text-rose-500">*</span></label>
+                        <input type="text" name="nom_manifestation"
+                               :required="typePublication === 'manifestation'"
+                               class="w-full px-4 py-3 bg-white border border-violet-200 rounded-xl focus:ring-4 focus:ring-violet-100 focus:border-violet-500 outline-none text-sm">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Type</label>
+                        <select name="type_manifestation"
+                                class="w-full px-4 py-3 bg-white border border-violet-200 rounded-xl focus:ring-4 focus:ring-violet-100 focus:border-violet-500 outline-none text-sm">
+                            <option value="">Sélectionner…</option>
+                            <option value="congres">Congrès</option>
+                            <option value="seminaire">Séminaire</option>
+                            <option value="colloque">Colloque</option>
+                            <option value="conference">Conférence</option>
+                            <option value="journee_etude">Journée d'étude</option>
+                            <option value="autre">Autre</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Date de l'événement</label>
+                        <input type="date" name="date_event"
+                               class="w-full px-4 py-3 bg-white border border-violet-200 rounded-xl focus:ring-4 focus:ring-violet-100 focus:border-violet-500 outline-none text-sm">
+                    </div>
+                    <div class="md:col-span-2">
+                        <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Lieu</label>
+                        <input type="text" name="lieu"
+                               class="w-full px-4 py-3 bg-white border border-violet-200 rounded-xl focus:ring-4 focus:ring-violet-100 focus:border-violet-500 outline-none text-sm"
+                               placeholder="Ville, Pays">
+                    </div>
+                </div>
+            </div>
+
+            {{-- ⑤ Résumé + PDF --}}
+            <div class="grid grid-cols-1 gap-4">
+                <div>
+                    <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Résumé (Abstract)</label>
+                    <textarea name="resume" rows="3"
+                              class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-4 focus:ring-indigo-100 focus:border-indigo-500 outline-none text-sm"></textarea>
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Fichier PDF <span class="text-rose-500">*</span></label>
+                    <input type="file" name="pdf" accept="application/pdf" required
+                           class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl outline-none text-sm">
+                </div>
+            </div>
+
             <div class="flex justify-end gap-3 pt-4 border-t border-slate-100">
                 <button type="button" onclick="document.getElementById('new-request-modal').classList.add('hidden')"
                     class="px-5 py-2.5 text-sm font-bold bg-white border border-slate-200 rounded-xl hover:bg-slate-50 transition-all">Annuler</button>

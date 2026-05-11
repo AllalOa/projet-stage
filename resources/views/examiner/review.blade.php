@@ -246,7 +246,7 @@ function reviewPage() {
                                 Votre Avis <span class="text-rose-500">*</span>
                             </label>
                             <input type="hidden" name="resultat" :value="avis">
-                            <div class="grid grid-cols-3 gap-3">
+                            <div class="grid grid-cols-2 gap-3">
                                 <button type="button" @click="avis = 'favorable'"
                                     class="p-5 border-2 rounded-xl text-center transition-all"
                                     :class="avis === 'favorable'
@@ -270,6 +270,15 @@ function reviewPage() {
                                         : 'border-slate-200 hover:border-rose-300'">
                                     <i class="fa-solid fa-thumbs-down text-rose-500 text-2xl mb-2 block"></i>
                                     <p class="text-sm font-bold text-slate-800">Défavorable</p>
+                                </button>
+                                <button type="button" @click="avis = 'rejete'"
+                                    class="p-5 border-2 rounded-xl text-center transition-all"
+                                    :class="avis === 'rejete'
+                                        ? 'border-red-800 bg-red-900/10 shadow-md shadow-red-200'
+                                        : 'border-slate-200 hover:border-red-800'">
+                                    <i class="fa-solid fa-ban text-red-800 text-2xl mb-2 block"></i>
+                                    <p class="text-sm font-bold text-slate-800">Rejeter</p>
+                                    <p class="text-[10px] text-slate-400 mt-0.5">Refus d'évaluer</p>
                                 </button>
                             </div>
                             <p x-show="!avis" class="text-xs text-rose-500 mt-2 font-bold">
@@ -363,8 +372,9 @@ function reviewPage() {
                                             'bg-emerald-50 text-emerald-700 border-emerald-200': avis === 'favorable',
                                             'bg-amber-50 text-amber-700 border-amber-200':       avis === 'reserve',
                                             'bg-rose-50 text-rose-700 border-rose-200':          avis === 'defavorable',
+                                            'bg-red-900/10 text-red-800 border-red-800':         avis === 'rejete',
                                         }"
-                                        x-text="avis === 'favorable' ? '✅ Favorable' : (avis === 'reserve' ? '✋ Réservé' : '❌ Défavorable')">
+                                        x-text="avis === 'favorable' ? '✅ Favorable' : (avis === 'reserve' ? '✋ Réservé' : (avis === 'defavorable' ? '❌ Défavorable' : '🚫 Rejeté'))">
                                     </span>
                                 </div>
                                 <div>

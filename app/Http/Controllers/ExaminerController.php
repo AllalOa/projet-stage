@@ -87,7 +87,7 @@ class ExaminerController extends Controller
             ->firstOrFail();
 
         $validated = $request->validate([
-            'resultat'       => 'required|in:favorable,defavorable,reserve',
+            'resultat'       => 'required|in:favorable,defavorable,reserve,rejete',
             'commentaire'    => 'required|string|min:20',
             'recommandation' => 'nullable|string',
             'confiance'      => 'nullable|integer|min:0|max:100',

@@ -121,17 +121,6 @@
         </template>
     </nav>
 
-    <!-- Role Switcher (For Demo Consistency) -->
-    <div class="p-4 border-t border-white/10">
-        <label class="text-xs text-white/50 uppercase font-bold" x-show="sidebarOpen">Switch Role (Demo)</label>
-        <select x-model="role" class="w-full mt-2 bg-indigo-800 text-white text-sm border-0 rounded p-1 focus:ring-0">
-            <option value="postulant">Postulant</option>
-            <option value="examiner">Examiner</option>
-            <option value="president-sub">Sub-Comm Pres.</option>
-            <option value="president-council">Council Pres.</option>
-            <option value="admin">Admin</option>
-        </select>
-    </div>
 
     <div class="p-4 border-t border-white/10">
         <form method="POST" action="{{ route('logout') }}" id="logout-form">

@@ -144,7 +144,7 @@
         <div x-show="step === 1" x-transition:enter="transition ease-out duration-200" x-transition:enter-start="opacity-0 translate-x-4" x-transition:enter-end="opacity-100 translate-x-0">
             <h4 class="text-lg font-bold text-slate-800 mb-6">Choisir le type de publication</h4>
             <div class="grid grid-cols-2 gap-4">
-                <button @click="type='journal'; next(2)"
+                <button type="button" @click="type='journal'; next(2)"
                     class="p-6 border-2 border-slate-200 rounded-2xl hover:border-indigo-500 hover:bg-indigo-50 transition-all text-left group">
                     <div class="w-12 h-12 bg-indigo-100 rounded-xl flex items-center justify-center mb-4 group-hover:bg-indigo-200 transition-colors">
                         <i class="fa-solid fa-book-open text-indigo-600 text-xl"></i>
@@ -152,7 +152,7 @@
                     <h5 class="font-bold text-slate-900">Article de Journal</h5>
                     <p class="text-xs text-slate-500 mt-1">Journaux scientifiques avec ISSN, facteur d'impact...</p>
                 </button>
-                <button @click="type='manifestation'; next(2)"
+                <button type="button" @click="type='manifestation'; next(2)"
                     class="p-6 border-2 border-slate-200 rounded-2xl hover:border-violet-500 hover:bg-violet-50 transition-all text-left group">
                     <div class="w-12 h-12 bg-violet-100 rounded-xl flex items-center justify-center mb-4 group-hover:bg-violet-200 transition-colors">
                         <i class="fa-solid fa-chalkboard-user text-violet-600 text-xl"></i>
@@ -163,27 +163,61 @@
             </div>
         </div>
 
+        {{-- STEP 2 + 3 + 4 : vrai formulaire POST --}}
+        <form id="create-request-form" method="POST" action="{{ route('postulant.requests.submit') }}" enctype="multipart/form-data">
+        @csrf
+        {{-- Champs synchronisés via Alpine --}}
+        <input type="hidden" name="nom_journal" :value="form.source">
+        <input type="hidden" name="issn"        :value="form.issn">
+
         {{-- STEP 2 — Détails --}}
         <div x-show="step === 2" x-transition:enter="transition ease-out duration-200" x-transition:enter-start="opacity-0 translate-x-4" x-transition:enter-end="opacity-100 translate-x-0" class="space-y-4">
-            <div>
-                <label class="block text-sm font-bold text-slate-700 mb-2">Titre Scientifique <span class="text-rose-500">*</span></label>
-                <input type="text" x-model="form.title" class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-4 focus:ring-indigo-100 focus:border-indigo-500 outline-none transition-all" placeholder="Titre complet de votre travail">
-            </div>
-            <div class="grid grid-cols-2 gap-4">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div class="md:col-span-2">
+                    <label class="block text-sm font-bold text-slate-700 mb-2">Titre Scientifique <span class="text-rose-500">*</span></label>
+                    <input type="text" name="titre" x-model="form.title" required
+                        class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-4 focus:ring-indigo-100 focus:border-indigo-500 outline-none transition-all"
+                        placeholder="Titre complet de votre travail">
+                </div>
+                <div>
+                    <label class="block text-sm font-bold text-slate-700 mb-2">Auteur Principal <span class="text-rose-500">*</span></label>
+                    <input type="text" name="auteur_principal" required
+                        class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-4 focus:ring-indigo-100 focus:border-indigo-500 outline-none transition-all"
+                        placeholder="Prénom Nom">
+                </div>
+                <div>
+                    <label class="block text-sm font-bold text-slate-700 mb-2">Date de Publication <span class="text-rose-500">*</span></label>
+                    <input type="date" name="date_publication" required
+                        class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-4 focus:ring-indigo-100 focus:border-indigo-500 outline-none transition-all">
+                </div>
+                <div class="md:col-span-2">
+                    <label class="block text-sm font-bold text-slate-700 mb-2">Sous-Commission <span class="text-rose-500">*</span></label>
+                    <select name="id_sous_comm" required
+                        class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-4 focus:ring-indigo-100 focus:border-indigo-500 outline-none transition-all">
+                        <option value="">Sélectionner une sous-commission</option>
+                        @foreach($sousCommissions as $sc)
+                            <option value="{{ $sc->id }}">{{ $sc->nom }}</option>
+                        @endforeach
+                    </select>
+                </div>
                 <div>
                     <label class="block text-sm font-bold text-slate-700 mb-2">Source (Journal / Conférence)</label>
-                    <input type="text" x-model="form.source" class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-4 focus:ring-indigo-100 focus:border-indigo-500 outline-none transition-all" placeholder="Ex: Nature Medicine">
+                    <input type="text" x-model="form.source"
+                        class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-4 focus:ring-indigo-100 focus:border-indigo-500 outline-none transition-all"
+                        placeholder="Ex: Nature Medicine">
                 </div>
                 <div>
                     <label class="block text-sm font-bold text-slate-700 mb-2">ISSN / DOI</label>
-                    <input type="text" x-model="form.issn" class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-4 focus:ring-indigo-100 focus:border-indigo-500 outline-none transition-all" placeholder="Ex: 10.xxxx/xxxxx">
+                    <input type="text" x-model="form.issn"
+                        class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-4 focus:ring-indigo-100 focus:border-indigo-500 outline-none transition-all"
+                        placeholder="Ex: 10.xxxx/xxxxx">
                 </div>
             </div>
             <div class="flex justify-between mt-6">
-                <button @click="next(1)" class="flex items-center gap-2 text-sm font-bold text-slate-500 hover:text-slate-800 px-4 py-2 rounded-xl hover:bg-slate-100 transition-all">
+                <button type="button" @click="next(1)" class="flex items-center gap-2 text-sm font-bold text-slate-500 hover:text-slate-800 px-4 py-2 rounded-xl hover:bg-slate-100 transition-all">
                     <i class="fa-solid fa-arrow-left"></i> Retour
                 </button>
-                <button @click="form.title ? next(3) : null"
+                <button type="button" @click="form.title ? next(3) : null"
                     :class="form.title ? 'bg-indigo-600 hover:bg-indigo-700 text-white shadow-lg shadow-indigo-200' : 'bg-slate-100 text-slate-400 cursor-not-allowed'"
                     class="flex items-center gap-2 text-sm font-bold px-6 py-3 rounded-xl transition-all">
                     Suivant <i class="fa-solid fa-arrow-right"></i>
@@ -194,13 +228,15 @@
         {{-- STEP 3 — Résumé & Fichier --}}
         <div x-show="step === 3" x-transition:enter="transition ease-out duration-200" x-transition:enter-start="opacity-0 translate-x-4" x-transition:enter-end="opacity-100 translate-x-0" class="space-y-5">
             <div>
-                <label class="block text-sm font-bold text-slate-700 mb-2">Résumé / Abstract <span class="text-rose-500">*</span></label>
-                <textarea x-model="form.abstract" rows="4" class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-4 focus:ring-indigo-100 focus:border-indigo-500 outline-none resize-none transition-all" placeholder="Résumé en français ou anglais (max 500 mots)..."></textarea>
+                <label class="block text-sm font-bold text-slate-700 mb-2">Résumé / Abstract</label>
+                <textarea name="resume" x-model="form.abstract" rows="4"
+                    class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-4 focus:ring-indigo-100 focus:border-indigo-500 outline-none resize-none transition-all"
+                    placeholder="Résumé en français ou anglais (max 500 mots)..."></textarea>
             </div>
             <div>
                 <label class="block text-sm font-bold text-slate-700 mb-2">Joindre le Dossier (PDF) <span class="text-rose-500">*</span></label>
                 <label class="block cursor-pointer group">
-                    <input type="file" accept=".pdf" class="hidden" @change="handleFile($event)">
+                    <input type="file" name="pdf" accept=".pdf" required class="hidden" @change="handleFile($event)">
                     <div class="border-2 border-dashed rounded-2xl p-8 text-center transition-all"
                          :class="form.filename ? 'border-emerald-400 bg-emerald-50' : 'border-slate-300 bg-slate-50 hover:border-indigo-400 hover:bg-indigo-50'">
                         <template x-if="!form.filename">
@@ -223,18 +259,18 @@
                 </label>
             </div>
             <div class="flex justify-between mt-2">
-                <button @click="next(2)" class="flex items-center gap-2 text-sm font-bold text-slate-500 hover:text-slate-800 px-4 py-2 rounded-xl hover:bg-slate-100 transition-all">
+                <button type="button" @click="next(2)" class="flex items-center gap-2 text-sm font-bold text-slate-500 hover:text-slate-800 px-4 py-2 rounded-xl hover:bg-slate-100 transition-all">
                     <i class="fa-solid fa-arrow-left"></i> Retour
                 </button>
-                <button @click="form.abstract ? next(4) : null"
-                    :class="form.abstract ? 'bg-indigo-600 hover:bg-indigo-700 text-white shadow-lg shadow-indigo-200' : 'bg-slate-100 text-slate-400 cursor-not-allowed'"
+                <button type="button" @click="form.filename ? next(4) : null"
+                    :class="form.filename ? 'bg-indigo-600 hover:bg-indigo-700 text-white shadow-lg shadow-indigo-200' : 'bg-slate-100 text-slate-400 cursor-not-allowed'"
                     class="flex items-center gap-2 text-sm font-bold px-6 py-3 rounded-xl transition-all">
                     Vérifier <i class="fa-solid fa-arrow-right"></i>
                 </button>
             </div>
         </div>
 
-        {{-- STEP 4 — Confirmer --}}
+        {{-- STEP 4 — Confirmer & Soumettre --}}
         <div x-show="step === 4" x-transition:enter="transition ease-out duration-200" x-transition:enter-start="opacity-0 translate-x-4" x-transition:enter-end="opacity-100 translate-x-0">
             <div class="bg-slate-50 rounded-2xl p-6 space-y-3 mb-6">
                 <h4 class="font-black text-slate-800 mb-4 flex items-center gap-2">
@@ -259,9 +295,7 @@
                     </div>
                     <div>
                         <p class="text-xs font-bold text-slate-400 uppercase mb-1">Fichier PDF</p>
-                        <p class="font-bold text-emerald-600 flex items-center gap-1" x-text="form.filename || 'Aucun fichier'">
-                            <i class="fa-solid fa-file-pdf" x-show="form.filename"></i>
-                        </p>
+                        <p class="font-bold text-emerald-600" x-text="form.filename || 'Aucun fichier'"></p>
                     </div>
                 </div>
             </div>
@@ -270,15 +304,17 @@
                 <p>Une fois soumise, votre demande sera examinée par la sous-commission. Vous recevrez une notification à chaque changement de statut.</p>
             </div>
             <div class="flex justify-between">
-                <button @click="next(3)" class="flex items-center gap-2 text-sm font-bold text-slate-500 hover:text-slate-800 px-4 py-2 rounded-xl hover:bg-slate-100 transition-all">
+                <button type="button" @click="next(3)" class="flex items-center gap-2 text-sm font-bold text-slate-500 hover:text-slate-800 px-4 py-2 rounded-xl hover:bg-slate-100 transition-all">
                     <i class="fa-solid fa-arrow-left"></i> Retour
                 </button>
-                <button @click="$store.modals.close(); showToast('Demande soumise avec succès !', 'success')"
+                <button type="submit"
                     class="flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-6 py-3 rounded-xl transition-all shadow-lg shadow-emerald-200">
                     <i class="fa-solid fa-paper-plane"></i> Soumettre
                 </button>
             </div>
         </div>
+
+        </form>{{-- /form --}}
 
     </div>
 </x-modal>
